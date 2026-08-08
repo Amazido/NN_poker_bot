@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Odessa Poker — локальный тестер</title>
+<title>Odessa Poker</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
   :root {
     --bg: #0f1420; --panel: #182031; --panel2: #1f2942; --line: #2c3752;
@@ -84,7 +85,23 @@
 <div class="wrap">
   <!-- Левая колонка: управление -->
   <div>
-    <div class="card">
+    <div class="card" id="cardSolo" style="display:none">
+      <h2>Telegram</h2>
+      <div id="tgUser" class="muted">вход…</div>
+      <div class="row" style="margin-top:8px">
+        <button id="btnTgCreate" class="primary">Создать комнату</button>
+        <button id="btnTgStart" class="primary">Старт</button>
+      </div>
+      <div class="row">
+        <input id="tgJoinCode" placeholder="код комнаты" style="width:130px" />
+        <button id="btnTgJoin">Войти по коду</button>
+      </div>
+      <div class="row muted" style="font-size:12px">
+        Создатель комнаты жмёт «Старт», когда все вошли по коду.
+      </div>
+    </div>
+
+    <div class="card" id="cardQuick">
       <h2>Быстрый старт</h2>
       <div class="row">
         <label class="muted">Игроков</label>
@@ -100,7 +117,7 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="cardManual">
       <h2>Вручную</h2>
       <div class="row">
         <input id="manualNames" value="Alice, Bob, Carol" style="flex:1" />
@@ -249,6 +266,51 @@ async function doQuick() {
   await doCreate();
   await doJoinAll();
   await doStart();
+}
+
+// --- Telegram WebApp режим (один игрок = один пользователь Telegram) ---
+let soloMode = false;
+
+function enterSoloMode(username) {
+  soloMode = true;
+  for (const id of ["cardQuick", "cardManual"]) { const el = $(id); if (el) el.style.display = "none"; }
+  const s = $("cardSolo"); if (s) s.style.display = "";
+  $("tgUser").textContent = "Вы вошли как " + username;
+}
+
+async function tgCreate() {
+  if (!players.length) return log("Нет сессии Telegram", "err");
+  try { await doCreate(); } catch (e) { log(e.message, "err"); }
+}
+
+async function tgJoin() {
+  if (!players.length) return log("Нет сессии Telegram", "err");
+  const code = $("tgJoinCode").value.trim().toUpperCase();
+  if (!code) return log("Введите код комнаты", "err");
+  try {
+    const st = await api("/rooms/join", { method: "POST", body: { join_code: code }, token: players[0].token });
+    room = { id: st.room_id, code: st.join_code };
+    $("joinCode").value = room.code;
+    log("Вошли в комнату " + room.code, "ok");
+    startPolling();
+  } catch (e) { log(e.message, "err"); }
+}
+
+async function initAuth() {
+  const tg = window.Telegram && window.Telegram.WebApp;
+  if (tg) { try { tg.ready(); tg.expand(); } catch (_) {} }
+  const initData = tg && tg.initData ? tg.initData : "";
+  if (!initData) return;   // обычный браузер → остаётся dev-тестер
+  try {
+    const d = await api("/auth/telegram", { method: "POST", body: { init_data: initData } });
+    const name = d.user.telegram_username || ("tg" + (d.user.telegram_id || "")) || "Игрок";
+    players = [{ name, token: d.token, userId: d.user.id, seat: null, hand: [], available: null }];
+    enterSoloMode(name);
+    renderPlayers();
+    log("Вход через Telegram: " + name, "ok");
+  } catch (e) {
+    log("Telegram auth: " + e.message, "err");
+  }
 }
 
 async function act(player, action_type, payload) {
@@ -445,6 +507,9 @@ $("btnCreate").onclick = () => doCreate().catch(e => log(e.message, "err"));
 $("btnJoinAll").onclick = () => doJoinAll().catch(e => log(e.message, "err"));
 $("btnStart").onclick = () => doStart().catch(e => log(e.message, "err"));
 $("btnReset").onclick = resetSession;
+$("btnTgCreate").onclick = () => tgCreate();
+$("btnTgStart").onclick = () => doStart().catch(e => log(e.message, "err"));
+$("btnTgJoin").onclick = () => tgJoin();
 $("apiBase").onchange = checkConn;
 // Адрес API по умолчанию:
 //  - тестер на :3000 (локально или по IP) → API на :8000;
@@ -455,6 +520,7 @@ $("apiBase").value = (location.port === "3000")
       ? location.origin
       : `${location.protocol}//${location.hostname || "localhost"}:8000`);
 checkConn();
+initAuth();
 </script>
 </body>
 </html>
