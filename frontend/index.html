@@ -446,8 +446,14 @@ $("btnJoinAll").onclick = () => doJoinAll().catch(e => log(e.message, "err"));
 $("btnStart").onclick = () => doStart().catch(e => log(e.message, "err"));
 $("btnReset").onclick = resetSession;
 $("apiBase").onchange = checkConn;
-// API по умолчанию — тот же хост, порт 8000 (работает и локально, и на сервере).
-$("apiBase").value = `${location.protocol}//${location.hostname || "localhost"}:8000`;
+// Адрес API по умолчанию:
+//  - тестер на :3000 (локально или по IP) → API на :8000;
+//  - через домен/прокси (порт 80/443) → same-origin (API проксируется nginx).
+$("apiBase").value = (location.port === "3000")
+  ? `${location.protocol}//${location.hostname}:8000`
+  : (location.origin && location.origin !== "null"
+      ? location.origin
+      : `${location.protocol}//${location.hostname || "localhost"}:8000`);
 checkConn();
 </script>
 </body>
