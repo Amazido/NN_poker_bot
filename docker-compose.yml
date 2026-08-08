@@ -35,8 +35,8 @@ services:
     image: centrifugo/centrifugo:v6
     restart: unless-stopped
     command: centrifugo -c /centrifugo/config.json
-    ports:
-      - "8001:8000"
+    # Наружу не публикуем: клиенты пока ходят по REST-поллингу. Для realtime WS
+    # позже откроем порт (и вынесем ключи из dev-конфига).
     volumes:
       - ./backend/centrifugo.dev.json:/centrifugo/config.json:ro
 
@@ -49,7 +49,7 @@ services:
       redis:
         condition: service_healthy
     environment:
-      DEBUG: "false"
+      DEBUG: "${DEBUG:-false}"
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-odessa}
       REDIS_URL: redis://redis:6379/0
       REDIS_KEY_PREFIX: prod
@@ -65,6 +65,16 @@ services:
     command: >
       sh -c "alembic upgrade head &&
              uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+  frontend:
+    image: nginx:alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+    ports:
+      - "3000:80"
 
 volumes:
   postgres_data:

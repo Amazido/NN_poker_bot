@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Odessa Poker — локальный тестер</title>
+<style>
+  :root {
+    --bg: #0f1420; --panel: #182031; --panel2: #1f2942; --line: #2c3752;
+    --txt: #e6ecf7; --muted: #8ea0c0; --accent: #4f8cff; --good: #3ecf8e;
+    --bad: #ff6b6b; --warn: #ffd166; --red: #ff5d6c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--txt);
+    font: 14px/1.45 -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  }
+  h1 { font-size: 18px; margin: 0; }
+  h2 { font-size: 14px; margin: 0 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  a { color: var(--accent); }
+  header {
+    display: flex; align-items: center; gap: 16px; padding: 12px 18px;
+    background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5;
+  }
+  header .grow { flex: 1; }
+  input, select, button {
+    font: inherit; color: var(--txt); background: var(--panel2);
+    border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px;
+  }
+  input { min-width: 90px; }
+  button { cursor: pointer; transition: .12s; }
+  button:hover { border-color: var(--accent); }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button.ghost { background: transparent; }
+  .wrap { display: grid; grid-template-columns: 340px 1fr; gap: 16px; padding: 16px; align-items: start; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .row + .row { margin-top: 8px; }
+  .muted { color: var(--muted); }
+  .pill { display: inline-block; padding: 2px 9px; border-radius: 999px; background: var(--panel2); border: 1px solid var(--line); font-size: 12px; }
+  .pill.good { color: var(--good); border-color: var(--good); }
+  .pill.warn { color: var(--warn); border-color: var(--warn); }
+  .players { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .pcard { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+  .pcard.turn { border-color: var(--warn); box-shadow: 0 0 0 2px rgba(255,209,102,.25); }
+  .pcard .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .pcard .name { font-weight: 700; }
+  .hand { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; min-height: 46px; }
+  .cardface {
+    width: 40px; height: 56px; border-radius: 7px; background: #fbfdff; color: #10131a;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-weight: 700; border: 1px solid #c9d3e6; user-select: none; position: relative;
+  }
+  .cardface.red { color: var(--red); }
+  .cardface.play { cursor: pointer; outline: 2px solid transparent; }
+  .cardface.play:hover { outline-color: var(--accent); transform: translateY(-3px); }
+  .cardface.disabled { opacity: .38; filter: grayscale(.4); }
+  .cardface .r { font-size: 15px; } .cardface .s { font-size: 16px; }
+  .bidbtns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .bidbtns button { min-width: 34px; padding: 6px 8px; }
+  .trick { display: flex; gap: 10px; flex-wrap: wrap; }
+  .trickcell { text-align: center; }
+  .trickcell .who { font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+  table.scores { width: 100%; border-collapse: collapse; }
+  table.scores th, table.scores td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); }
+  table.scores td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  #log { font-family: ui-monospace, Consolas, monospace; font-size: 12px; max-height: 160px; overflow: auto; white-space: pre-wrap; }
+  .err { color: var(--bad); }
+  .ok { color: var(--good); }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; }
+  .kv div:nth-child(odd) { color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>♠ Odessa Poker <span class="muted" style="font-weight:400">локальный тестер</span></h1>
+  <div class="grow"></div>
+  <label class="muted">API</label>
+  <input id="apiBase" style="min-width:210px" />
+  <span id="conn" class="pill">не проверено</span>
+</header>
+
+<div class="wrap">
+  <!-- Левая колонка: управление -->
+  <div>
+    <div class="card">
+      <h2>Быстрый старт</h2>
+      <div class="row">
+        <label class="muted">Игроков</label>
+        <select id="numPlayers">
+          <option>3</option><option>4</option><option>5</option>
+        </select>
+      </div>
+      <div class="row">
+        <button id="btnQuick" class="primary">Логин + стол + старт</button>
+      </div>
+      <div class="row muted" style="font-size:12px">
+        Заведёт N dev-игроков, создаст комнату, рассадит всех и начнёт матч.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Вручную</h2>
+      <div class="row">
+        <input id="manualNames" value="Alice, Bob, Carol" style="flex:1" />
+        <button id="btnLogin">Логин</button>
+      </div>
+      <div class="row">
+        <button id="btnCreate">Создать комнату</button>
+        <button id="btnJoinAll">Рассадить всех</button>
+        <button id="btnStart" class="primary">Старт</button>
+      </div>
+      <div class="row">
+        <input id="joinCode" placeholder="код комнаты" style="width:120px" />
+        <button id="btnReset" class="ghost">Сброс сессии</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Комната</h2>
+      <div id="roomInfo" class="kv"><div class="muted">нет</div><div></div></div>
+    </div>
+
+    <div class="card">
+      <h2>Счёт</h2>
+      <table class="scores"><tbody id="scores"><tr><td class="muted">—</td></tr></tbody></table>
+    </div>
+
+    <div class="card">
+      <h2>Лог</h2>
+      <div id="log"></div>
+    </div>
+  </div>
+
+  <!-- Правая колонка: игроки + стол -->
+  <div>
+    <div class="card">
+      <h2>Стол</h2>
+      <div id="tableInfo" class="row muted">Матч не начат.</div>
+      <div style="margin-top:12px">
+        <div class="muted" style="margin-bottom:6px">Текущая взятка</div>
+        <div id="trick" class="trick"><span class="muted">—</span></div>
+      </div>
+      <div style="margin-top:12px">
+        <div class="muted" style="margin-bottom:6px">Прошлая взятка</div>
+        <div id="lastTrick" class="trick"><span class="muted">—</span></div>
+      </div>
+    </div>
+
+    <div class="players" id="players"></div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const SUIT = { C: "♣", D: "♦", H: "♥", S: "♠" };
+const RANK = { T: "10" };
+
+let players = [];      // {name, token, userId, seat, hand, available}
+let room = null;       // {id, code}
+let pub = null;        // последний публичный стейт
+let polling = null;
+
+function log(msg, cls = "") {
+  const el = $("log");
+  const time = new Date().toLocaleTimeString();
+  el.innerHTML = `<span class="${cls}">[${time}] ${msg}</span>\n` + el.innerHTML;
+}
+
+function apiBase() { return $("apiBase").value.replace(/\/$/, ""); }
+
+async function api(path, { method = "GET", body = null, token = null } = {}) {
+  const headers = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = "Bearer " + token;
+  const res = await fetch(apiBase() + path, {
+    method, headers, body: body ? JSON.stringify(body) : null,
+  });
+  const text = await res.text();
+  let data; try { data = text ? JSON.parse(text) : {}; } catch { data = { detail: text }; }
+  if (!res.ok) throw new Error(data.detail || (res.status + " " + res.statusText));
+  return data;
+}
+
+// --- Карта → красивый вид ---
+function cardFace(code, { playable = false, disabled = false, onclick = null } = {}) {
+  const div = document.createElement("div");
+  div.className = "cardface" + (playable ? " play" : "") + (disabled ? " disabled" : "");
+  let rankTxt, suitTxt, red = false;
+  if (code[0] === "X") {
+    rankTxt = "🃏"; suitTxt = code[1] === "R" ? "red" : "blk"; red = code[1] === "R";
+    div.innerHTML = `<div class="r">🃏</div><div class="s" style="font-size:10px">${suitTxt}</div>`;
+  } else {
+    const suit = code[code.length - 1];
+    const rank = code.slice(0, -1);
+    rankTxt = RANK[rank] || rank; suitTxt = SUIT[suit]; red = suit === "D" || suit === "H";
+    div.innerHTML = `<div class="r">${rankTxt}</div><div class="s">${suitTxt}</div>`;
+  }
+  if (red) div.classList.add("red");
+  if (onclick && !disabled) div.onclick = onclick;
+  return div;
+}
+
+// --- Действия ---
+async function loginDev(name) {
+  const d = await api("/auth/dev", { method: "POST", body: { username: name } });
+  return { name, token: d.token, userId: d.user.id, seat: null, hand: [], available: null };
+}
+
+async function doLogin() {
+  const names = $("manualNames").value.split(",").map(s => s.trim()).filter(Boolean);
+  players = [];
+  for (const n of names) players.push(await loginDev(n));
+  log(`Логин: ${players.map(p => p.name).join(", ")}`, "ok");
+  renderPlayers();
+}
+
+async function doCreate() {
+  if (!players.length) return log("Сначала логин", "err");
+  const st = await api("/rooms", { method: "POST", body: {}, token: players[0].token });
+  room = { id: st.room_id, code: st.join_code };
+  players[0].seat = 0;
+  $("joinCode").value = room.code;
+  log(`Комната создана: ${room.code}`, "ok");
+  startPolling();
+}
+
+async function doJoinAll() {
+  if (!room) return log("Нет комнаты", "err");
+  for (let i = 1; i < players.length; i++) {
+    await api("/rooms/join", { method: "POST", body: { join_code: room.code }, token: players[i].token });
+  }
+  log("Игроки рассажены", "ok");
+  await poll();
+}
+
+async function doStart() {
+  if (!room) return log("Нет комнаты", "err");
+  await api(`/rooms/${room.id}/start`, { method: "POST", token: players[0].token });
+  log("Матч начат", "ok");
+  await poll();
+}
+
+async function doQuick() {
+  const n = parseInt($("numPlayers").value, 10);
+  const base = ["Alice", "Bob", "Carol", "Dave", "Erin"];
+  $("manualNames").value = base.slice(0, n).join(", ");
+  await doLogin();
+  await doCreate();
+  await doJoinAll();
+  await doStart();
+}
+
+async function act(player, action_type, payload) {
+  try {
+    await api(`/rooms/${room.id}/action`, { method: "POST", body: { action_type, payload }, token: player.token });
+    const short = action_type === "bid" ? `заказ ${payload.bid}` : `ход ${payload.card}`;
+    log(`${player.name}: ${short}`);
+    await poll();
+  } catch (e) {
+    log(`${player.name}: ${e.message}`, "err");
+  }
+}
+
+// --- Поллинг ---
+function startPolling() {
+  if (polling) clearInterval(polling);
+  polling = setInterval(poll, 1200);
+  poll();
+}
+
+async function poll() {
+  if (!room || !players.length) return;
+  try {
+    pub = await api(`/rooms/${room.id}`, { token: players[0].token });
+    // синхронизируем seat из публичного стейта
+    for (const p of players) {
+      const s = (pub.seats || []).find(x => x.user_id === p.userId);
+      p.seat = s ? s.seat : p.seat;
+    }
+    // приватные руки для рассаженных
+    for (const p of players) {
+      if (p.seat === null || p.seat === undefined) continue;
+      if (pub.status === "playing" || pub.round) {
+        try { const h = await api(`/rooms/${room.id}/hand`, { token: p.token });
+          p.hand = h.hand; p.available = h.available_actions; } catch {}
+      }
+    }
+    render();
+    $("conn").textContent = "OK"; $("conn").className = "pill good";
+  } catch (e) {
+    $("conn").textContent = "ошибка"; $("conn").className = "pill warn";
+    log("poll: " + e.message, "err");
+  }
+}
+
+// --- Рендер ---
+function seatName(seat) {
+  const p = players.find(x => x.seat === seat);
+  if (p) return p.name;
+  const s = (pub?.seats || []).find(x => x.seat === seat);
+  return s ? s.username : "seat " + seat;
+}
+
+function render() {
+  renderRoom(); renderTable(); renderPlayers(); renderScores();
+}
+
+function renderRoom() {
+  const el = $("roomInfo");
+  if (!room) { el.innerHTML = '<div class="muted">нет</div><div></div>'; return; }
+  const turn = pub?.turn || {};
+  el.innerHTML = `
+    <div>Код</div><div><b>${room.code}</b></div>
+    <div>Статус</div><div>${pub?.status ?? "—"}</div>
+    <div>Раунд</div><div>${pub ? (pub.round_index + 1) + " / " + pub.rounds_total : "—"}</div>
+    <div>Ход</div><div>${turn.kind ? (turn.kind === "bid" ? "торги" : "розыгрыш") + " · " + seatName(turn.seat) : "—"}</div>`;
+}
+
+function renderTable() {
+  const el = $("tableInfo");
+  const r = pub?.round;
+  if (!r) { el.innerHTML = '<span class="muted">Матч не начат.</span>'; return; }
+  const trumpTxt = r.no_trump ? "БЕЗ КОЗЫРЯ" : (SUIT[r.trump_suit] || r.trump_suit);
+  const phase = { bidding: "Торги", playing: "Розыгрыш", scoring: "Подсчёт", finished: "Раздача завершена" }[r.phase] || r.phase;
+  el.innerHTML = `
+    <span class="pill">Карт: <b>${r.cards_count}</b></span>
+    <span class="pill">Козырь: <b>${trumpTxt}</b> <span class="muted">(${r.trump_card})</span></span>
+    <span class="pill">Сдаёт: ${seatName(r.dealer_seat)}</span>
+    <span class="pill warn">${phase}</span>
+    <span class="pill">Взятка №${r.trick_number}</span>`;
+
+  // текущая взятка
+  const t = $("trick");
+  const plays = r.current_trick?.plays || [];
+  if (!plays.length) t.innerHTML = '<span class="muted">—</span>';
+  else {
+    t.innerHTML = "";
+    for (const p of plays) {
+      const cell = document.createElement("div"); cell.className = "trickcell";
+      cell.innerHTML = `<div class="who">${seatName(p.seat)}</div>`;
+      cell.appendChild(cardFace(p.card));
+      t.appendChild(cell);
+    }
+  }
+  // прошлая взятка
+  const lt = $("lastTrick");
+  if (!r.last_trick) lt.innerHTML = '<span class="muted">—</span>';
+  else {
+    lt.innerHTML = "";
+    for (const p of r.last_trick.plays) {
+      const cell = document.createElement("div"); cell.className = "trickcell";
+      const win = p.seat === r.last_trick.winner ? " ✦" : "";
+      cell.innerHTML = `<div class="who">${seatName(p.seat)}${win}</div>`;
+      const f = cardFace(p.card); if (win) f.style.outline = "2px solid var(--good)";
+      cell.appendChild(f); lt.appendChild(cell);
+    }
+  }
+}
+
+function renderPlayers() {
+  const el = $("players"); el.innerHTML = "";
+  const r = pub?.round;
+  const turn = pub?.turn || {};
+  for (const p of players) {
+    const card = document.createElement("div");
+    const isTurn = r && turn.seat === p.seat && turn.kind;
+    card.className = "pcard" + (isTurn ? " turn" : "");
+
+    const bid = r && p.seat != null ? r.bids?.[p.seat] : undefined;
+    const won = r && p.seat != null ? r.tricks_won?.[p.seat] : undefined;
+    card.innerHTML = `
+      <div class="head">
+        <span class="name">${p.name}</span>
+        <span class="pill">${p.seat != null ? "место " + p.seat : "не за столом"}</span>
+      </div>
+      <div class="row" style="font-size:12px">
+        <span class="muted">заказ:</span> <b>${bid ?? "—"}</b>
+        <span class="muted">взял:</span> <b>${won ?? "—"}</b>
+        ${isTurn ? '<span class="pill warn">ваш ход</span>' : ''}
+      </div>`;
+
+    // действия
+    if (r && p.available) {
+      if (p.available.type === "bid") {
+        const box = document.createElement("div"); box.className = "bidbtns";
+        for (const opt of p.available.options) {
+          const b = document.createElement("button");
+          b.textContent = opt; b.onclick = () => act(p, "bid", { bid: opt });
+          box.appendChild(b);
+        }
+        const label = document.createElement("div");
+        label.className = "muted"; label.style.cssText = "font-size:12px;margin-top:8px";
+        label.textContent = "Заказать взятки:";
+        card.appendChild(label); card.appendChild(box);
+      }
+    }
+
+    // рука
+    const hand = document.createElement("div"); hand.className = "hand";
+    const legal = (p.available && p.available.type === "play") ? p.available.cards : null;
+    if (p.hand && p.hand.length) {
+      for (const code of p.hand) {
+        const canPlay = legal && legal.includes(code);
+        const f = cardFace(code, {
+          playable: canPlay,
+          disabled: legal && !canPlay,
+          onclick: canPlay ? () => act(p, "play_card", { card: code }) : null,
+        });
+        hand.appendChild(f);
+      }
+    } else hand.innerHTML = '<span class="muted">нет карт</span>';
+    card.appendChild(hand);
+    el.appendChild(card);
+  }
+}
+
+function renderScores() {
+  const el = $("scores");
+  const seats = pub?.seats || [];
+  if (!seats.length) { el.innerHTML = '<tr><td class="muted">—</td></tr>'; return; }
+  const sorted = [...seats].sort((a, b) => b.score - a.score);
+  el.innerHTML = "<tr><th>Игрок</th><th>Место</th><th style='text-align:right'>Очки</th></tr>" +
+    sorted.map(s => `<tr><td>${s.username}</td><td>${s.seat}</td><td class="num">${s.score}</td></tr>`).join("");
+  if (pub?.match_over) log("Матч завершён!", "ok");
+}
+
+function resetSession() {
+  players = []; room = null; pub = null;
+  if (polling) clearInterval(polling);
+  $("players").innerHTML = ""; renderRoom(); renderScores();
+  $("tableInfo").innerHTML = '<span class="muted">Матч не начат.</span>';
+  log("Сессия сброшена");
+}
+
+// --- Проверка соединения ---
+async function checkConn() {
+  try { await api("/health"); $("conn").textContent = "API OK"; $("conn").className = "pill good"; }
+  catch { $("conn").textContent = "нет связи"; $("conn").className = "pill warn"; }
+}
+
+$("btnQuick").onclick = () => doQuick().catch(e => log(e.message, "err"));
+$("btnLogin").onclick = () => doLogin().catch(e => log(e.message, "err"));
+$("btnCreate").onclick = () => doCreate().catch(e => log(e.message, "err"));
+$("btnJoinAll").onclick = () => doJoinAll().catch(e => log(e.message, "err"));
+$("btnStart").onclick = () => doStart().catch(e => log(e.message, "err"));
+$("btnReset").onclick = resetSession;
+$("apiBase").onchange = checkConn;
+// API по умолчанию — тот же хост, порт 8000 (работает и локально, и на сервере).
+$("apiBase").value = `${location.protocol}//${location.hostname || "localhost"}:8000`;
+checkConn();
+</script>
+</body>
+</html>
