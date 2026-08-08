@@ -1,0 +1,32 @@
+# FastAPI и сервер
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+
+# JWT токены
+PyJWT>=2.8.0
+
+# Pydantic
+pydantic>=2.0.0
+
+# PostgreSQL + SQLAlchemy
+asyncpg>=0.29.0
+sqlalchemy[asyncio]>=2.0.0
+alembic>=1.13.0
+
+# Переменные окружения
+python-dotenv>=1.0.0
+
+# Логирование
+loguru>=0.7.0
+
+# Redis
+redis[hiredis]>=5.0.0
+
+# Centrifugo server API client
+cent>=5.0.0
+
+# === Testing ===
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+httpx>=0.27.0
+aiosqlite>=0.20.0

@@ -1,0 +1,57 @@
+# Инфраструктура для локальной разработки (без самого приложения).
+# Запуск: docker compose -f docker-compose.dev.yml up -d
+# Приложение поднимается локально: uvicorn app.main:app --reload
+
+name: odessa-poker
+
+services:
+  postgres-dev:
+    image: postgres:15-alpine
+    container_name: odessa-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: odessa_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis-dev:
+    image: redis:7-alpine
+    container_name: odessa-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  centrifugo-dev:
+    image: centrifugo/centrifugo:v6
+    container_name: odessa-centrifugo-dev
+    restart: unless-stopped
+    command: centrifugo -c /centrifugo/config.json
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./centrifugo.dev.json:/centrifugo/config.json:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://127.0.0.1:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  postgres_dev_data:
+  redis_dev_data:

@@ -1,0 +1,71 @@
+# Прод-профиль: приложение + инфраструктура.
+# Запуск: docker compose up -d --build
+# Миграции: docker compose run --rm app alembic upgrade head
+
+name: odessa-poker
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-odessa}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  centrifugo:
+    image: centrifugo/centrifugo:v6
+    restart: unless-stopped
+    command: centrifugo -c /centrifugo/config.json
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./backend/centrifugo.dev.json:/centrifugo/config.json:ro
+
+  app:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DEBUG: "false"
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-odessa}
+      REDIS_URL: redis://redis:6379/0
+      REDIS_KEY_PREFIX: prod
+      CENTRIFUGO_API_URL: http://centrifugo:8000/api
+      CENTRIFUGO_API_KEY: ${CENTRIFUGO_API_KEY:-dev-centrifugo-api-key}
+      CENTRIFUGO_TOKEN_SECRET: ${CENTRIFUGO_TOKEN_SECRET:-dev-centrifugo-secret}
+      CENTRIFUGO_CHANNEL_PREFIX: prod
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-prod}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+volumes:
+  postgres_data:
+  redis_data:

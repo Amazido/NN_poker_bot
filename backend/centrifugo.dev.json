@@ -1,0 +1,35 @@
+{
+  "admin": {
+    "enabled": true,
+    "password": "admin",
+    "secret": "dev-admin-secret"
+  },
+  "http_api": {
+    "enabled": true,
+    "key": "dev-centrifugo-api-key"
+  },
+  "health": {
+    "enabled": true
+  },
+  "client": {
+    "allowed_origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
+    "token": {
+      "hmac_secret_key": "dev-centrifugo-secret"
+    }
+  },
+  "channel": {
+    "without_namespace": {
+      "allow_subscribe_for_client": true,
+      "allow_publish_for_client": false
+    },
+    "namespaces": [
+      {
+        "name": "dev",
+        "allow_subscribe_for_client": true,
+        "allow_publish_for_client": false,
+        "allow_user_limited_channels": true,
+        "allow_subscribe_for_anonymous": true
+      }
+    ]
+  }
+}
