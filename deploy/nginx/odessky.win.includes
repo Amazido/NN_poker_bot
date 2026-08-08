@@ -1,0 +1,9 @@
+# Odessa Poker — маршрутизация API на бэкенд (контейнер app), фронт отдаётся
+# статикой из корня сайта существующим location / { index index.html }.
+# Копируется в /etc/nginx/fastpanel2-sites/odessky_win_usr/odessky.win.includes
+location = /health       { include /etc/nginx/snippets/odessa_api.conf; }
+location = /ready        { include /etc/nginx/snippets/odessa_api.conf; }
+location = /openapi.json { include /etc/nginx/snippets/odessa_api.conf; }
+location /auth/          { include /etc/nginx/snippets/odessa_api.conf; }
+location /rooms          { include /etc/nginx/snippets/odessa_api.conf; }
+location /docs           { include /etc/nginx/snippets/odessa_api.conf; }
