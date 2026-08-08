@@ -9,10 +9,16 @@
   DEPLOY_HOST, DEPLOY_PORT (по умолч. 22), DEPLOY_USER, DEPLOY_PASSWORD
 """
 import os
-import stat
 import sys
 
 import paramiko
+
+# Консоль Windows (cp1251) не умеет часть символов из вывода docker/git — форсим UTF-8.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def _client() -> paramiko.SSHClient:
