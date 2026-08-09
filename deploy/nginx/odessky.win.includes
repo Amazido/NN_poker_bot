@@ -7,3 +7,5 @@ location = /openapi.json { include /etc/nginx/snippets/odessa_api.conf; }
 location /auth/          { include /etc/nginx/snippets/odessa_api.conf; }
 location /rooms          { include /etc/nginx/snippets/odessa_api.conf; }
 location /docs           { include /etc/nginx/snippets/odessa_api.conf; }
+# WebSocket Centrifugo (realtime): /connection/websocket и др.
+location /connection/    { include /etc/nginx/snippets/odessa_ws.conf; }

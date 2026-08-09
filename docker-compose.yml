@@ -35,10 +35,15 @@ services:
     image: centrifugo/centrifugo:v6
     restart: unless-stopped
     command: centrifugo -c /centrifugo/config.json
-    # Наружу не публикуем: клиенты пока ходят по REST-поллингу. Для realtime WS
-    # позже откроем порт (и вынесем ключи из dev-конфига).
+    # Секреты приходят через env (перекрывают файл-конфиг); в JSON только структура.
+    environment:
+      CENTRIFUGO_HTTP_API_KEY: ${CENTRIFUGO_API_KEY:-dev-centrifugo-api-key}
+      CENTRIFUGO_CLIENT_TOKEN_HMAC_SECRET_KEY: ${CENTRIFUGO_TOKEN_SECRET:-dev-centrifugo-secret}
     volumes:
-      - ./backend/centrifugo.dev.json:/centrifugo/config.json:ro
+      - ./backend/centrifugo.prod.json:/centrifugo/config.json:ro
+    # Только на localhost хоста: наружу проксирует nginx (/connection/websocket).
+    ports:
+      - "127.0.0.1:8001:8000"
 
   app:
     build: ./backend

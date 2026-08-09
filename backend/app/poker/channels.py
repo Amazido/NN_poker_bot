@@ -30,3 +30,15 @@ async def publish_events(state: GameState, events: List[dict]) -> None:
     if not events:
         return
     await safe_publish(ch_room(state["room_id"]), {"type": "events", "events": events})
+
+
+async def publish_lobby(public: dict) -> None:
+    """Разослать состояние лобби в канал комнаты (матч ещё не стартовал).
+
+    Live-стейта в Redis для лобби нет, поэтому шлём готовый публичный вид из БД:
+    подключившиеся к каналу комнаты увидят, кто сел за стол.
+    """
+    room_id = public.get("room_id")
+    if not room_id:
+        return
+    await safe_publish(ch_room(room_id), {"type": "lobby", "state": public})

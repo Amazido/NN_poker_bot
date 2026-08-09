@@ -89,7 +89,9 @@ class PokerService:
         )
         await self.room_repo.add_player(room_id=room.id, user_id=user.id, seat_index=0)
         poker_log.info("Room {} created by {} (rules {})", room.join_code, user.id, edition.code)
-        return await self.get_public(str(room.id))
+        pub = await self.get_public(str(room.id))
+        await channels.publish_lobby(pub)
+        return pub
 
     async def join_room(self, user: UserModel, join_code: str) -> dict:
         room = await self.room_repo.get_by_join_code(join_code.upper())
@@ -108,7 +110,9 @@ class PokerService:
 
         await self.room_repo.add_player(room_id=room.id, user_id=user.id, seat_index=count)
         poker_log.info("User {} joined room {} (seat {})", user.id, room.join_code, count)
-        return await self.get_public(str(room.id))
+        pub = await self.get_public(str(room.id))
+        await channels.publish_lobby(pub)
+        return pub
 
     # === Старт матча ===
 

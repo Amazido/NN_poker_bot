@@ -1,0 +1,29 @@
+{
+  "admin": {
+    "enabled": false
+  },
+  "http_api": {
+    "enabled": true
+  },
+  "health": {
+    "enabled": true
+  },
+  "client": {
+    "allowed_origins": ["https://odessky.win"],
+    "token": {}
+  },
+  "channel": {
+    "without_namespace": {
+      "allow_subscribe_for_client": false,
+      "allow_publish_for_client": false
+    },
+    "namespaces": [
+      {
+        "name": "prod",
+        "allow_subscribe_for_client": true,
+        "allow_publish_for_client": false,
+        "allow_user_limited_channels": true
+      }
+    ]
+  }
+}
