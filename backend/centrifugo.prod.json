@@ -2,9 +2,6 @@
   "admin": {
     "enabled": false
   },
-  "http_api": {
-    "enabled": true
-  },
   "health": {
     "enabled": true
   },
