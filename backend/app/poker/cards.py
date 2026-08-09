@@ -10,8 +10,10 @@
 Старшинство во взятке (сверху вниз), КОГДА ЕСТЬ КОЗЫРЬ:
   1. Козырный джокер (цвет совпадает с цветом козыря) — бьёт всё.
   2. Козыри (по рангу).
-  3. Некозырной джокер — бьёт все обычные карты любой масти, но проигрывает
-     козырю и козырному джокеру («второй сверху»).
+  3. Некозырной джокер берёт масть сброса ТОЛЬКО если её цвет совпадает с цветом
+     джокера; против карт чужого цвета он ведёт себя как пустышка (тогда берёт
+     старшая карта масти сброса). Если некозырной джокер ведёт взятку (масть
+     сброса не задана) — берёт её, но проигрывает любому козырю.
   4. Карты масти сброса (по рангу).
   5. Пустышки (прочие масти) — во взятке не участвуют.
 
@@ -123,49 +125,6 @@ def _effective_rank(card: str, present: List[str], two_beats_ace: bool) -> int:
     return r
 
 
-def _strength(
-    card: str,
-    *,
-    trump_suit: Optional[str],
-    lead_suit: Optional[str],
-    no_trump_high_joker: Optional[str],
-    present: List[str],
-    flags: Dict[str, bool],
-) -> Tuple[int, int]:
-    """Ключ силы карты во взятке: (категория, ранг). Больше — сильнее.
-
-    Категории:
-      7 — некозырной джокер при offcolor_beats_oncolor (старший)
-      6 — козырный джокер / старший джокер без козыря
-      5 — козырь / второй джокер без козыря
-      4 — некозырной джокер (обычная редакция)
-      3 — масть сброса
-      0 — пустышка
-    """
-    two_beats_ace = flags.get("two_beats_ace_same_suit", False)
-
-    if is_joker(card):
-        if trump_suit is not None:
-            trump_color = color_of_suit(trump_suit)
-            if joker_color(card) == trump_color:
-                return (6, 0)  # козырный джокер
-            # некозырной джокер
-            if flags.get("offcolor_beats_oncolor", False):
-                return (7, 0)
-            return (4, 0)
-        # без козыря
-        if card == no_trump_high_joker:
-            return (6, 0)
-        return (5, 0)
-
-    # обычная карта
-    if trump_suit is not None and suit_of(card) == trump_suit:
-        return (5, _effective_rank(card, present, two_beats_ace))
-    if lead_suit is not None and suit_of(card) == lead_suit:
-        return (3, _effective_rank(card, present, two_beats_ace))
-    return (0, 0)  # пустышка
-
-
 def trick_winner(
     plays: List[Tuple[int, str]],
     *,
@@ -178,31 +137,75 @@ def trick_winner(
 
     plays — список (seat, card) в порядке хода. lead_suit — масть сброса
     (масть первой карты; None, если первым вышел джокер → сброс без масти).
+
+    Некозырной джокер контекстно-зависим (берёт только карты своего цвета),
+    поэтому победитель считается по явному порядку приоритетов, а не через
+    независимый скаляр силы каждой карты.
     """
     flags = flags or {}
     present = [c for _, c in plays]
-    best_seat = plays[0][0]
-    best_key = _strength(
-        plays[0][1],
-        trump_suit=trump_suit,
-        lead_suit=lead_suit,
-        no_trump_high_joker=no_trump_high_joker,
-        present=present,
-        flags=flags,
+    two_beats_ace = flags.get("two_beats_ace_same_suit", False)
+
+    def erank(card: str) -> int:
+        return _effective_rank(card, present, two_beats_ace)
+
+    def best_of_suit(suit: str) -> Optional[int]:
+        cand = [(s, c) for s, c in plays if not is_joker(c) and suit_of(c) == suit]
+        if not cand:
+            return None
+        return max(cand, key=lambda sc: erank(sc[1]))[0]
+
+    # === БЕЗ КОЗЫРЯ (колоду ведёт джокер) ===
+    if trump_suit is None:
+        jokers = [(s, c) for s, c in plays if is_joker(c)]
+        if jokers:
+            for s, c in jokers:
+                if c == no_trump_high_joker:
+                    return s
+            return jokers[0][0]
+        if lead_suit is not None:
+            w = best_of_suit(lead_suit)
+            if w is not None:
+                return w
+        return plays[0][0]
+
+    # === ЕСТЬ КОЗЫРЬ ===
+    trump_color = color_of_suit(trump_suit)
+    offcolor_beats = flags.get("offcolor_beats_oncolor", False)
+    oncolor_joker = next(
+        ((s, c) for s, c in plays if is_joker(c) and joker_color(c) == trump_color), None
     )
-    for seat, card in plays[1:]:
-        key = _strength(
-            card,
-            trump_suit=trump_suit,
-            lead_suit=lead_suit,
-            no_trump_high_joker=no_trump_high_joker,
-            present=present,
-            flags=flags,
-        )
-        if key > best_key:
-            best_key = key
-            best_seat = seat
-    return best_seat
+    offcolor_joker = next(
+        ((s, c) for s, c in plays if is_joker(c) and joker_color(c) != trump_color), None
+    )
+
+    # 1. Джокеры высшего порядка.
+    if offcolor_beats and offcolor_joker is not None:
+        return offcolor_joker[0]  # редакция: некозырной джокер бьёт козырного
+    if oncolor_joker is not None:
+        return oncolor_joker[0]
+
+    # 2. Козыри.
+    w_trump = best_of_suit(trump_suit)
+    if w_trump is not None:
+        return w_trump
+
+    # 3. Нет козырей и козырного джокера. Некозырной джокер — только свой цвет.
+    if lead_suit is not None:
+        if offcolor_joker is not None and joker_color(offcolor_joker[1]) == color_of_suit(lead_suit):
+            return offcolor_joker[0]  # джокер бьёт масть сброса своего цвета
+        w_lead = best_of_suit(lead_suit)
+        if w_lead is not None:
+            return w_lead  # масть сброса чужого цвета → джокер пустышка
+        if offcolor_joker is not None:
+            return offcolor_joker[0]
+        return plays[0][0]
+
+    # Некозырной джокер ведёт взятку (масть сброса не задана): козыри уже
+    # обработаны выше, значит джокер берёт.
+    if offcolor_joker is not None:
+        return offcolor_joker[0]
+    return plays[0][0]
 
 
 def lead_suit_of_play(card: str) -> Optional[str]:

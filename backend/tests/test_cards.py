@@ -75,3 +75,44 @@ def test_two_beats_ace_same_suit_flag():
     assert C.trick_winner(
         plays, trump_suit="S", lead_suit="H", flags={"two_beats_ace_same_suit": True}
     ) == 1
+
+
+def test_offcolor_joker_is_dummy_vs_foreign_color_lead():
+    # Козырь ♠ (чёрный). Масть сброса ♣ (чёрная, не козырь) — чужой цвет для
+    # красного джокера → XR пустышка, берёт старшая ♣.
+    plays = [(0, "KC"), (1, "XR"), (2, "2C")]
+    assert C.trick_winner(plays, trump_suit="S", lead_suit="C") == 0
+
+
+def test_offcolor_joker_takes_lead_of_own_color():
+    # Козырь ♣ (чёрный). Масть сброса ♦ (красная) = цвет XR → джокер берёт,
+    # даже если есть более старшая чужая пустышка ♠.
+    plays = [(0, "AD"), (1, "XR"), (2, "KS")]
+    assert C.trick_winner(plays, trump_suit="C", lead_suit="D") == 1
+
+
+def test_offcolor_joker_leads_and_wins_without_trump_in_trick():
+    # Козырь ♠. XR ведёт (масть сброса не задана). Козырей во взятке нет →
+    # джокер берёт независимо от цвета остальных карт.
+    plays = [(0, "XR"), (1, "AH"), (2, "KD")]
+    assert C.trick_winner(plays, trump_suit="S", lead_suit=None) == 0
+
+
+def test_trump_beats_offcolor_joker_leading():
+    # Козырь ♠. XR ведёт, но кто-то кладёт козырь → козырь берёт.
+    plays = [(0, "XR"), (1, "AH"), (2, "2S")]
+    assert C.trick_winner(plays, trump_suit="S", lead_suit=None) == 2
+
+
+def test_oncolor_joker_beats_offcolor_joker_by_default():
+    # Козырь ♠ (чёрный): XB (козырный) старше XR (некозырного).
+    plays = [(0, "XB"), (1, "XR")]
+    assert C.trick_winner(plays, trump_suit="S", lead_suit=None) == 0
+
+
+def test_offcolor_beats_oncolor_flag():
+    # Редакция «некозырной джокер берёт козырного»: XR становится старшим.
+    plays = [(0, "XB"), (1, "XR")]
+    assert C.trick_winner(
+        plays, trump_suit="S", lead_suit=None, flags={"offcolor_beats_oncolor": True}
+    ) == 1
