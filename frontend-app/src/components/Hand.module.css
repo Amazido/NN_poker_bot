@@ -1,0 +1,16 @@
+.tray {
+  flex: 0 0 auto;
+  padding: 10px 0 18px;
+  position: relative;
+}
+.row {
+  display: flex;
+  justify-content: center;
+  padding: 0 18px;
+}
+.slot {
+  margin-left: -14px;
+}
+.slot:first-child {
+  margin-left: 0;
+}
