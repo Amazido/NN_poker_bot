@@ -7,19 +7,24 @@ import type { GameView } from '../types/game';
 export interface BiddingScreenProps {
   view: GameView;
   onBid: (n: number) => void;
+  onLeave?: () => void;
   /** Короткий код комнаты — после старта матча бэк его в GameView уже не отдаёт. */
   roomCode?: string;
 }
 
-export function BiddingScreen({ view, onBid, roomCode }: BiddingScreenProps) {
+export function BiddingScreen({ view, onBid, onLeave, roomCode }: BiddingScreenProps) {
   const r = view.round!;
   const me = view.me!;
   const dealerName = view.seats.find((s) => s.seat === r.dealer_seat)?.username ?? '';
   const bidderName = view.seats.find((s) => s.seat === r.bid_turn)?.username ?? '';
 
+  function handleLeave() {
+    if (onLeave && window.confirm('Покинуть матч? За тебя начнут доигрывать автоматически до конца.')) onLeave();
+  }
+
   return (
     <>
-      <AppHeader roomCode={roomCode ?? view.room_id} />
+      <AppHeader roomCode={roomCode ?? view.room_id} onLeave={onLeave ? handleLeave : undefined} />
       <StatusBar>
         {view.rounds_total && (
           <Pill>

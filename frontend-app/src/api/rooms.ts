@@ -13,6 +13,11 @@ export function startMatch(roomId: string): Promise<PublicView> {
   return apiFetch<PublicView>(`/rooms/${roomId}/start`, { method: 'POST' });
 }
 
+/** В лобби — уходишь совсем. В активном матче — место остаётся, доигрывает авто-ход. */
+export function leaveRoomApi(roomId: string): Promise<PublicView> {
+  return apiFetch<PublicView>(`/rooms/${roomId}/leave`, { method: 'POST' });
+}
+
 export function bid(roomId: string, value: number): Promise<PublicView> {
   return apiFetch<PublicView>(`/rooms/${roomId}/action`, {
     method: 'POST',

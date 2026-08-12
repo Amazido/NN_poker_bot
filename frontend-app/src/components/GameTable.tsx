@@ -37,17 +37,29 @@ function OpponentSeat({ view, seat, mode, point }: { view: GameView; seat: Seat;
   const r = view.round!;
   const count = r.hand_counts[seat.seat] ?? 0;
   const isTurn = mode === 'playing' && r.current_trick?.turn === seat.seat;
+  const hasLeft = view.left_seats?.includes(seat.seat) ?? false;
   return (
     <div className={`${styles.oppSeat} ${isTurn ? styles.turn : ''}`} style={{ left: point.x, top: point.y }}>
-      <div className={`${styles.avatar} ${styles.oppAvatar}`}>{seat.username[0]}</div>
+      <div className={`${styles.avatar} ${styles.oppAvatar}`} style={hasLeft ? { opacity: 0.5 } : undefined}>
+        {seat.username[0]}
+      </div>
       <div className={styles.oppName}>{seat.username}</div>
-      {mode === 'playing' && <PlayingMeta view={view} seat={seat.seat} />}
+      {mode === 'playing' && !hasLeft && <PlayingMeta view={view} seat={seat.seat} />}
+      {mode === 'playing' && hasLeft && (
+        <div className={styles.oppMeta}>
+          заказ <b>{r.bids[seat.seat] ?? '—'}</b> · взял <b>{r.tricks_won[seat.seat] ?? 0}</b>
+        </div>
+      )}
       <div className={styles.oppCardsMini}>
         {Array.from({ length: Math.min(count, 7) }).map((_, i) => (
           <CardBack key={i} size="sm" />
         ))}
       </div>
-      {mode === 'bidding' && <BiddingBadge view={view} seat={seat.seat} />}
+      {hasLeft ? (
+        <span className={badgeClass('waiting')}>Вышел · авто-ход</span>
+      ) : (
+        mode === 'bidding' && <BiddingBadge view={view} seat={seat.seat} />
+      )}
     </div>
   );
 }

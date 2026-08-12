@@ -106,6 +106,33 @@ class RoomRepository:
         )
         await self.session.commit()
 
+    async def mark_left(self, room_id: uuid.UUID, user_id: uuid.UUID) -> None:
+        """Отметить игрока ушедшим (место остаётся за ним — матч уже идёт)."""
+        await self.session.execute(
+            update(RoomPlayerModel)
+            .where(RoomPlayerModel.room_id == room_id, RoomPlayerModel.user_id == user_id)
+            .values(status=RoomPlayerStatus.LEFT)
+        )
+        await self.session.commit()
+
+    async def remove_player_and_renumber(self, room_id: uuid.UUID, seat_index: int) -> None:
+        """Убрать игрока из лобби и сдвинуть места правее на одно влево (0..N-1 подряд —
+        это предположение движка при старте матча, см. engine._next_seat)."""
+        res = await self.session.execute(
+            select(RoomPlayerModel).where(
+                RoomPlayerModel.room_id == room_id, RoomPlayerModel.seat_index == seat_index
+            )
+        )
+        row = res.scalar_one_or_none()
+        if row:
+            await self.session.delete(row)
+        await self.session.execute(
+            update(RoomPlayerModel)
+            .where(RoomPlayerModel.room_id == room_id, RoomPlayerModel.seat_index > seat_index)
+            .values(seat_index=RoomPlayerModel.seat_index - 1)
+        )
+        await self.session.commit()
+
     async def set_progress(
         self,
         room_id: uuid.UUID,

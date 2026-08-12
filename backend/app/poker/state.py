@@ -102,6 +102,7 @@ def public_view(state: GameState) -> Dict[str, Any]:
         "rounds_total": len(state["sequence"]),
         "round": round_public,
         "turn": {"kind": kind, "seat": seat},
+        "left_seats": state.get("left_seats", []),
     }
 
 

@@ -3,13 +3,18 @@ import type { RoundPublic } from '../types/game';
 import { suitInner } from '../lib/cards';
 import styles from './AppHeader.module.css';
 
-export function AppHeader({ roomCode }: { roomCode: string }) {
+export function AppHeader({ roomCode, onLeave }: { roomCode: string; onLeave?: () => void }) {
   return (
     <div className={styles.header}>
       <div className={styles.brand}>
         Одесский покер
         <small>стол №{roomCode}</small>
       </div>
+      {onLeave && (
+        <button className={styles.leaveBtn} onClick={onLeave}>
+          Выйти
+        </button>
+      )}
     </div>
   );
 }

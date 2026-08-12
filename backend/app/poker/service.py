@@ -46,6 +46,10 @@ class PokerService:
         self.room_repo = room_repo
         self.round_repo = round_repo
 
+    # Дедлайн хода ушедшего игрока — не ждём полный turn_timeout_sec, чтобы не
+    # подвешивать оставшихся за столом (см. leave_room).
+    LEFT_SEAT_TIMEOUT_SEC = 2
+
     def _stamp_deadline(self, state: dict) -> None:
         """Проставить дедлайн текущего хода (для фонового авто-хода)."""
         kind, seat = engine.current_turn(state)
@@ -53,7 +57,9 @@ class PokerService:
             state["turn_deadline"] = None
             return
         rules = RulesEdition(state["rules"])
-        deadline = datetime.now(timezone.utc) + timedelta(seconds=rules.turn_timeout_sec)
+        left_seats = set(state.get("left_seats", []))
+        timeout = self.LEFT_SEAT_TIMEOUT_SEC if seat in left_seats else rules.turn_timeout_sec
+        deadline = datetime.now(timezone.utc) + timedelta(seconds=timeout)
         state["turn_deadline"] = deadline.isoformat()
 
     # === Комната ===
@@ -113,6 +119,36 @@ class PokerService:
         pub = await self.get_public(str(room.id))
         await channels.publish_lobby(pub)
         return pub
+
+    async def leave_room(self, user: UserModel, room_id: str) -> dict:
+        room = await self.room_repo.get(room_id)
+        if not room:
+            raise NotFound("Room not found")
+        player = await self.room_repo.get_player(room.id, user.id)
+        if not player:
+            raise Conflict("You are not seated in this room")
+
+        if room.status == RoomStatus.LOBBY:
+            await self.room_repo.remove_player_and_renumber(room.id, player.seat_index)
+            poker_log.info("User {} left lobby {}", user.id, room.join_code)
+            pub = await self.get_public(str(room.id))
+            await channels.publish_lobby(pub)
+            return pub
+
+        # Матч уже идёт: место остаётся (движок завязан на фиксированное n_players),
+        # но помечаем как "ушёл" — фоновый таймер станет доигрывать за него почти
+        # сразу (LEFT_SEAT_TIMEOUT_SEC), а не через полный turn_timeout_sec.
+        await self.room_repo.mark_left(room.id, user.id)
+        state = await state_store.load_state(room_id)
+        if state and not state.get("match_over"):
+            left = set(state.get("left_seats", []))
+            left.add(player.seat_index)
+            state["left_seats"] = sorted(left)
+            self._stamp_deadline(state)
+            await state_store.save_state(room_id, state)
+            await channels.publish_snapshot(state)
+        poker_log.info("User {} left active room {} (seat {} -> auto-play)", user.id, room.join_code, player.seat_index)
+        return await self.get_public(room_id)
 
     # === Старт матча ===
 

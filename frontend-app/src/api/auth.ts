@@ -64,3 +64,8 @@ async function login(): Promise<void> {
 export function getMe(): Promise<Me> {
   return apiFetch<Me>('/auth/me');
 }
+
+/** Токен подключения к Centrifugo (живёт 60 минут на бэке — вызывать повторно для рефреша). */
+export function getCentrifugoToken(): Promise<string> {
+  return apiFetch<{ token: string }>('/auth/centrifugo-token').then((r) => r.token);
+}

@@ -61,6 +61,8 @@ export interface PublicView {
   rounds_total?: number;
   round: RoundPublic | null;
   turn: { kind: 'bid' | 'play' | null; seat: number | null };
+  /** Места, чей игрок вышел посреди матча — за них доигрывает авто-ход. */
+  left_seats: number[];
 }
 
 export type AvailableActions =

@@ -50,6 +50,7 @@ export function makeFixture(screenType: FixtureScreen, n: number): GameView {
       round_index: 0,
       round: null,
       turn: { kind: null, seat: null },
+      left_seats: [],
       me: null,
     };
   }
@@ -93,6 +94,7 @@ export function makeFixture(screenType: FixtureScreen, n: number): GameView {
         hand_counts: handCounts,
       },
       turn: { kind: 'bid', seat: bidTurnIdx },
+      left_seats: [],
       me: {
         seat: meSeat,
         hand: hands[meSeat],
@@ -149,6 +151,7 @@ export function makeFixture(screenType: FixtureScreen, n: number): GameView {
       hand_counts: handCounts,
     },
     turn: { kind: 'play', seat: currentTurnSeat },
+    left_seats: [],
     me: {
       seat: meSeat,
       hand: hands[meSeat],

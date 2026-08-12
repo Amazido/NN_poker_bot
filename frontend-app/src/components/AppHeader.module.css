@@ -22,6 +22,21 @@
   text-transform: uppercase;
   margin-top: 1px;
 }
+.leaveBtn {
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 12px;
+  padding: 6px 11px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.leaveBtn:hover {
+  color: var(--bad);
+  border-color: var(--bad);
+}
 .statusBar {
   flex: 0 0 auto;
   padding: 0 18px 12px;

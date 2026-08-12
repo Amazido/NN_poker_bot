@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import styles from './App.module.css';
 import { ensureLoggedIn, getMe } from './api/auth';
 import { clearToken, ApiError } from './api/http';
-import { createRoom, joinRoom, startMatch, bid, playCard } from './api/rooms';
+import { createRoom, joinRoom, startMatch, bid, playCard, leaveRoomApi } from './api/rooms';
 import { useGameView } from './api/useGameView';
 import { getTelegramWebApp, getStartParam } from './api/telegram';
 import { resolveScreen } from './screen-resolver';
@@ -11,6 +11,7 @@ import { WaitingScreen } from './screens/WaitingScreen';
 import { BiddingScreen } from './screens/BiddingScreen';
 import { PlayingScreen } from './screens/PlayingScreen';
 import { StatusScreen } from './screens/StatusScreen';
+import { FinishedScreen } from './screens/FinishedScreen';
 import DevHarness from './DevHarness';
 
 const ROOM_KEY = 'op_room_id';
@@ -45,7 +46,7 @@ export default function App() {
     })();
   }, []);
 
-  const { view, error: pollError } = useGameView(myUserId ? roomId : null);
+  const { view, error: pollError } = useGameView(roomId, myUserId);
 
   // join_code бэк отдаёт только в лобби (см. открытые вопросы в спеке) — запоминаем,
   // пока он виден, чтобы показать короткий код и после старта матча.
@@ -66,6 +67,10 @@ export default function App() {
   }
 
   function leaveRoom() {
+    // Отписываем на бэке "по-честному" (в лобби — освобождает место, в матче —
+    // включает авто-ход за нас), но локальную навигацию не блокируем её результатом:
+    // человек должен суметь уйти с экрана, даже если этот запрос не доедет.
+    if (roomId) leaveRoomApi(roomId).catch(() => {});
     localStorage.removeItem(ROOM_KEY);
     localStorage.removeItem(ROOM_CODE_KEY);
     setRoomId(null);
@@ -165,9 +170,13 @@ export default function App() {
         />
       );
     } else if (resolved.type === 'bidding') {
-      body = <BiddingScreen view={resolved.view} onBid={handleBid} roomCode={roomCode ?? undefined} />;
+      body = <BiddingScreen view={resolved.view} onBid={handleBid} onLeave={leaveRoom} roomCode={roomCode ?? undefined} />;
     } else if (resolved.type === 'playing') {
-      body = <PlayingScreen view={resolved.view} onPlay={handlePlay} roomCode={roomCode ?? undefined} />;
+      body = <PlayingScreen view={resolved.view} onPlay={handlePlay} onLeave={leaveRoom} roomCode={roomCode ?? undefined} />;
+    } else if (resolved.type === 'loading') {
+      body = <StatusScreen message="Загружаем стол…" />;
+    } else if (resolved.type === 'finished') {
+      body = <FinishedScreen view={resolved.view} onLeave={leaveRoom} />;
     } else {
       body = <StatusScreen message="Этот момент раздачи фронт пока не умеет показывать (sub-project C)." />;
     }
