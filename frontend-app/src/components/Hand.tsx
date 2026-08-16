@@ -6,11 +6,18 @@ export interface HandProps {
   cards: CardCode[];
   legal?: Set<CardCode> | null;
   onPlay?: (code: CardCode) => void;
+  /** Изменение счёта за только что законченную раздачу — показать пару секунд. */
+  scoreDelta?: number | null;
 }
 
-export function Hand({ cards, legal, onPlay }: HandProps) {
+export function Hand({ cards, legal, onPlay, scoreDelta }: HandProps) {
   return (
     <div className={styles.tray}>
+      {scoreDelta != null && (
+        <span className={`${styles.scorePop} ${scoreDelta >= 0 ? styles.scorePopGood : styles.scorePopBad}`}>
+          {scoreDelta >= 0 ? `+${scoreDelta}` : scoreDelta}
+        </span>
+      )}
       <div className={styles.row}>
         {cards.map((code, i) => {
           const playable = legal ? legal.has(code) : false;

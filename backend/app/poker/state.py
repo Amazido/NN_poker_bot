@@ -103,6 +103,7 @@ def public_view(state: GameState) -> Dict[str, Any]:
         "round": round_public,
         "turn": {"kind": kind, "seat": seat},
         "left_seats": state.get("left_seats", []),
+        "turn_deadline": state.get("turn_deadline"),
     }
 
 
@@ -131,6 +132,11 @@ def private_view(state: GameState, seat: int) -> Dict[str, Any]:
         "hand": hand,
         "your_turn": available is not None,
         "available_actions": available,
+        # Публичный и приватный вид приходят отдельными WS-сообщениями — фронт
+        # сверяет их с одноимёнными полями в public_view, чтобы не показать
+        # смесь новой раздачи/фазы со старой рукой (см. useGameView.ts).
+        "round_index": state["round_index"],
+        "phase": r["phase"] if r is not None else None,
     }
 
 

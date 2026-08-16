@@ -3,18 +3,33 @@ import type { RoundPublic } from '../types/game';
 import { suitInner } from '../lib/cards';
 import styles from './AppHeader.module.css';
 
-export function AppHeader({ roomCode, onLeave }: { roomCode: string; onLeave?: () => void }) {
+export function AppHeader({
+  roomCode,
+  onLeave,
+  onShowScores,
+}: {
+  roomCode: string;
+  onLeave?: () => void;
+  onShowScores?: () => void;
+}) {
   return (
     <div className={styles.header}>
       <div className={styles.brand}>
         Одесский покер
         <small>стол №{roomCode}</small>
       </div>
-      {onLeave && (
-        <button className={styles.leaveBtn} onClick={onLeave}>
-          Выйти
-        </button>
-      )}
+      <div className={styles.headerActions}>
+        {onShowScores && (
+          <button className={styles.scoresBtn} onClick={onShowScores}>
+            Счёт
+          </button>
+        )}
+        {onLeave && (
+          <button className={styles.leaveBtn} onClick={onLeave}>
+            Выйти
+          </button>
+        )}
+      </div>
     </div>
   );
 }

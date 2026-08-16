@@ -54,3 +54,16 @@
 .waitingNote b {
   color: var(--ink);
 }
+.yourTurnNote {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-radius: 11px;
+  padding: 9px 10px;
+  font-weight: 700;
+}

@@ -46,7 +46,7 @@ export default function App() {
     })();
   }, []);
 
-  const { view, error: pollError } = useGameView(roomId, myUserId);
+  const { view, error: pollError, lastRoundScore } = useGameView(roomId, myUserId);
 
   // join_code бэк отдаёт только в лобби (см. открытые вопросы в спеке) — запоминаем,
   // пока он виден, чтобы показать короткий код и после старта матча.
@@ -184,9 +184,25 @@ export default function App() {
         />
       );
     } else if (resolved.type === 'bidding') {
-      body = <BiddingScreen view={resolved.view} onBid={handleBid} onLeave={leaveRoom} roomCode={roomCode ?? undefined} />;
+      body = (
+        <BiddingScreen
+          view={resolved.view}
+          onBid={handleBid}
+          onLeave={leaveRoom}
+          lastRoundScore={lastRoundScore}
+          roomCode={roomCode ?? undefined}
+        />
+      );
     } else if (resolved.type === 'playing') {
-      body = <PlayingScreen view={resolved.view} onPlay={handlePlay} onLeave={leaveRoom} roomCode={roomCode ?? undefined} />;
+      body = (
+        <PlayingScreen
+          view={resolved.view}
+          onPlay={handlePlay}
+          onLeave={leaveRoom}
+          lastRoundScore={lastRoundScore}
+          roomCode={roomCode ?? undefined}
+        />
+      );
     } else if (resolved.type === 'loading') {
       body = <StatusScreen message="Загружаем стол…" />;
     } else if (resolved.type === 'finished') {

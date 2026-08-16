@@ -22,6 +22,11 @@
   text-transform: uppercase;
   margin-top: 1px;
 }
+.headerActions {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 6px;
+}
 .leaveBtn {
   flex: 0 0 auto;
   border: 1px solid var(--line);
@@ -36,6 +41,21 @@
 .leaveBtn:hover {
   color: var(--bad);
   border-color: var(--bad);
+}
+.scoresBtn {
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 12px;
+  padding: 6px 11px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.scoresBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 .statusBar {
   flex: 0 0 auto;

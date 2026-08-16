@@ -51,6 +51,7 @@ export function makeFixture(screenType: FixtureScreen, n: number): GameView {
       round: null,
       turn: { kind: null, seat: null },
       left_seats: [],
+      turn_deadline: null,
       me: null,
     };
   }
@@ -95,6 +96,7 @@ export function makeFixture(screenType: FixtureScreen, n: number): GameView {
       },
       turn: { kind: 'bid', seat: bidTurnIdx },
       left_seats: [],
+      turn_deadline: null,
       me: {
         seat: meSeat,
         hand: hands[meSeat],
@@ -102,6 +104,8 @@ export function makeFixture(screenType: FixtureScreen, n: number): GameView {
         available_actions: myTurn
           ? { type: 'bid', options: forbidden === null ? options : options.filter((o) => o !== forbidden) }
           : null,
+        round_index: 3,
+        phase: 'bidding',
       },
     };
   }
@@ -152,11 +156,14 @@ export function makeFixture(screenType: FixtureScreen, n: number): GameView {
     },
     turn: { kind: 'play', seat: currentTurnSeat },
     left_seats: [],
+    turn_deadline: null,
     me: {
       seat: meSeat,
       hand: hands[meSeat],
       your_turn: myTurn,
       available_actions: myTurn ? { type: 'play', cards: legalMoves(hands[meSeat], leadSuit, trumpSuit) } : null,
+      round_index: 3,
+      phase: 'playing',
     },
   };
 }

@@ -64,6 +64,14 @@ export interface PublicView {
   turn: { kind: 'bid' | 'play' | null; seat: number | null };
   /** Места, чей игрок вышел посреди матча — за них доигрывает авто-ход. */
   left_seats: number[];
+  /** Дедлайн текущего хода (ISO) — для таймера; null, если ходить некому. */
+  turn_deadline: string | null;
+}
+
+/** Событие "round_scored" из WS-канала комнаты (см. api/useGameView.ts). */
+export interface RoundScoreEvent {
+  round_index: number;
+  result: Record<string, RoundResult>;
 }
 
 export type AvailableActions =
@@ -75,6 +83,11 @@ export interface PrivateView {
   hand: CardCode[];
   your_turn: boolean;
   available_actions: AvailableActions | null;
+  /** Публичный и приватный вид прилетают отдельными WS-сообщениями — сверяем
+   * с одноимёнными полями в PublicView, чтобы не отрисовать смесь новой
+   * раздачи/фазы со старой рукой (см. screen-resolver.ts). */
+  round_index: number;
+  phase: RoundPublic['phase'] | null;
 }
 
 // Результат мёржа GET /rooms/{id} + GET /rooms/{id}/hand на фронте.

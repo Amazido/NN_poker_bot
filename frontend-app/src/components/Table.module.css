@@ -101,12 +101,40 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.whoWinner {
+  color: var(--good);
+  font-weight: 700;
+}
+.winnerCard {
+  border-radius: 9px;
+  box-shadow: 0 0 0 2px var(--good);
+}
+.lastTrick {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+.lastTrickLabel {
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
 
 .oppSeat {
   position: absolute;
   transform: translate(-50%, -50%);
   width: 84px;
   text-align: center;
+}
+.avatarWrap {
+  position: relative;
+  width: 30px;
+  margin: 0 auto 6px;
+}
+.avatarWrap .avatar {
+  margin: 0;
 }
 .oppAvatar {
   width: 30px;
@@ -115,6 +143,62 @@
 }
 .oppSeat.turn .oppAvatar {
   box-shadow: 0 0 0 3px var(--accent-soft), 0 0 0 1.5px var(--accent);
+}
+.timerOverlay {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.dealerChip {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1.5px solid var(--accent);
+  color: var(--accent);
+  font-family: 'Unbounded', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.scorePop {
+  position: absolute;
+  left: 50%;
+  top: -6px;
+  transform: translate(-50%, -100%);
+  font-family: 'Unbounded', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 12px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+  animation: scorePopIn 0.25s ease-out;
+}
+.scorePopGood {
+  background: var(--good);
+  color: #fff;
+}
+.scorePopBad {
+  background: var(--bad);
+  color: #fff;
+}
+@keyframes scorePopIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -80%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -100%);
+  }
 }
 .oppName {
   font-size: 11.5px;

@@ -1,7 +1,8 @@
 import { seatArcPositions } from '../lib/layout';
 import { useElementSize } from '../lib/useElementSize';
-import type { GameView, Seat } from '../types/game';
+import type { GameView, RoundScoreEvent, Seat } from '../types/game';
 import { Card, CardBack } from './Card';
+import { TurnTimer } from './TurnTimer';
 import styles from './Table.module.css';
 
 // используются, пока ResizeObserver ещё не измерил реальный контейнер
@@ -33,15 +34,46 @@ function PlayingMeta({ view, seat }: { view: GameView; seat: number }) {
   );
 }
 
-function OpponentSeat({ view, seat, mode, point }: { view: GameView; seat: Seat; mode: 'bidding' | 'playing'; point: { x: number; y: number } }) {
+function OpponentSeat({
+  view,
+  seat,
+  mode,
+  point,
+  scoreDelta,
+}: {
+  view: GameView;
+  seat: Seat;
+  mode: 'bidding' | 'playing';
+  point: { x: number; y: number };
+  scoreDelta: number | null;
+}) {
   const r = view.round!;
   const count = r.hand_counts[seat.seat] ?? 0;
-  const isTurn = mode === 'playing' && r.current_trick?.turn === seat.seat;
+  const isTurn = mode === 'bidding' ? r.bid_turn === seat.seat : r.current_trick?.turn === seat.seat;
   const hasLeft = view.left_seats?.includes(seat.seat) ?? false;
+  const isDealer = r.dealer_seat === seat.seat;
+
   return (
     <div className={`${styles.oppSeat} ${isTurn ? styles.turn : ''}`} style={{ left: point.x, top: point.y }}>
-      <div className={`${styles.avatar} ${styles.oppAvatar}`} style={hasLeft ? { opacity: 0.5 } : undefined}>
-        {seat.username[0]}
+      <div className={styles.avatarWrap}>
+        {isTurn && view.turn_deadline && (
+          <div className={styles.timerOverlay}>
+            <TurnTimer deadline={view.turn_deadline} size={40} />
+          </div>
+        )}
+        <div className={`${styles.avatar} ${styles.oppAvatar}`} style={hasLeft ? { opacity: 0.5 } : undefined}>
+          {seat.username[0]}
+        </div>
+        {isDealer && (
+          <span className={styles.dealerChip} title="Сдаёт">
+            Д
+          </span>
+        )}
+        {scoreDelta !== null && (
+          <span className={`${styles.scorePop} ${scoreDelta >= 0 ? styles.scorePopGood : styles.scorePopBad}`}>
+            {scoreDelta >= 0 ? `+${scoreDelta}` : scoreDelta}
+          </span>
+        )}
       </div>
       <div className={styles.oppName}>{seat.username}</div>
       {mode === 'playing' && !hasLeft && <PlayingMeta view={view} seat={seat.seat} />}
@@ -64,6 +96,30 @@ function OpponentSeat({ view, seat, mode, point }: { view: GameView; seat: Seat;
   );
 }
 
+function LastTrick({ view }: { view: GameView }) {
+  const last = view.round!.last_trick;
+  if (!last) return null;
+  return (
+    <div className={styles.lastTrick}>
+      <div className={styles.lastTrickLabel}>Прошлая взятка</div>
+      <div className={styles.trickCards}>
+        {last.plays.map((p) => {
+          const name = view.seats.find((s) => s.seat === p.seat)?.username ?? '';
+          const isWinner = p.seat === last.winner;
+          return (
+            <div key={p.seat} className={styles.trickSlot}>
+              <div className={isWinner ? styles.winnerCard : undefined}>
+                <Card code={p.card} size="sm" />
+              </div>
+              <div className={`${styles.who} ${isWinner ? styles.whoWinner : ''}`}>{isWinner ? `✓ ${name}` : name}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function CenterZone({ view, mode }: { view: GameView; mode: 'bidding' | 'playing' }) {
   const r = view.round!;
   if (mode === 'bidding') {
@@ -77,6 +133,7 @@ function CenterZone({ view, mode }: { view: GameView; mode: 'bidding' | 'playing
     return (
       <div className={styles.centerZone}>
         <div className={styles.centerHint}>Взятка №{r.trick_number}</div>
+        <LastTrick view={view} />
       </div>
     );
   }
@@ -98,7 +155,15 @@ function CenterZone({ view, mode }: { view: GameView; mode: 'bidding' | 'playing
   );
 }
 
-export function GameTable({ view, mode }: { view: GameView; mode: 'bidding' | 'playing' }) {
+export function GameTable({
+  view,
+  mode,
+  lastRoundScore,
+}: {
+  view: GameView;
+  mode: 'bidding' | 'playing';
+  lastRoundScore?: RoundScoreEvent | null;
+}) {
   const [wrapRef, size] = useElementSize<HTMLDivElement>();
   const opponents = view.seats.filter((s) => s.seat !== view.me!.seat);
   const points = seatArcPositions(opponents.length, size.width || FALLBACK_W, size.height || FALLBACK_H);
@@ -107,7 +172,14 @@ export function GameTable({ view, mode }: { view: GameView; mode: 'bidding' | 'p
     <div className={styles.tableWrap} ref={wrapRef}>
       <div className={styles.tableOval} />
       {opponents.map((seat, i) => (
-        <OpponentSeat key={seat.seat} view={view} seat={seat} mode={mode} point={points[i]} />
+        <OpponentSeat
+          key={seat.seat}
+          view={view}
+          seat={seat}
+          mode={mode}
+          point={points[i]}
+          scoreDelta={lastRoundScore?.result[seat.seat]?.delta ?? null}
+        />
       ))}
       <CenterZone view={view} mode={mode} />
     </div>

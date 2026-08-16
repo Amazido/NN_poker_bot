@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { TurnTimer } from './TurnTimer';
 import styles from './ActionPanel.module.css';
 
 export function BidPad({ maxBid, options, onBid }: { maxBid: number; options: number[]; onBid: (n: number) => void }) {
@@ -27,6 +28,17 @@ export function WaitingTurnNote({ children }: { children: ReactNode }) {
   return (
     <div className={styles.panel}>
       <div className={styles.waitingNote}>{children}</div>
+    </div>
+  );
+}
+
+export function YourTurnBanner({ deadline }: { deadline: string | null }) {
+  return (
+    <div className={styles.panel}>
+      <div className={styles.yourTurnNote}>
+        <TurnTimer deadline={deadline} size={22} />
+        Твой ход!
+      </div>
     </div>
   );
 }

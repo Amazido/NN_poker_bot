@@ -65,12 +65,29 @@ export function jokerInner(color: string): string {
 
 const SUITS: Suit[] = ['C', 'D', 'H', 'S'];
 const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
+const RANK_VALUE: Record<string, number> = Object.fromEntries(RANKS.map((r, i) => [r, i]));
 
 export function buildDeck(): CardCode[] {
   const deck: CardCode[] = [];
   for (const s of SUITS) for (const r of RANKS) deck.push(r + s);
   deck.push('XR', 'XB');
   return deck;
+}
+
+/** Своя масть, козырь первым, по возрастанию ранга; джокеры — в конце. */
+export function sortHand(cards: CardCode[], trumpSuit?: string | null): CardCode[] {
+  const suitOrder = (s: Suit) => (trumpSuit && s === trumpSuit ? -1 : SUITS.indexOf(s));
+  return [...cards].sort((a, b) => {
+    const pa = parseCard(a);
+    const pb = parseCard(b);
+    if (pa.joker || pb.joker) {
+      if (pa.joker && pb.joker) return a.localeCompare(b);
+      return pa.joker ? 1 : -1;
+    }
+    const suitDiff = suitOrder(pa.suit!) - suitOrder(pb.suit!);
+    if (suitDiff !== 0) return suitDiff;
+    return RANK_VALUE[pa.rank!] - RANK_VALUE[pb.rank!];
+  });
 }
 
 /** Обязана масть сброса → иначе козырь → иначе любая; джокеров можно класть всегда. */
