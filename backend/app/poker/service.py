@@ -13,7 +13,7 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import Conflict, InvalidMove, NotFound
-from app.db.models import GameRoomModel, RoomStatus, UserModel
+from app.db.models import GameRoomModel, RoomStatus, UserModel, UserType
 from app.logger import poker_log
 from app.poker import channels, engine
 from app.poker import state as state_store
@@ -120,6 +120,38 @@ class PokerService:
         await channels.publish_lobby(pub)
         return pub
 
+    async def add_bot(self, user: UserModel, room_id: str) -> dict:
+        """Хост добавляет бота на свободное место (тестовая и «не хватает игроков» фича).
+
+        Бот доигрывает через тот же механизм, что и ушедший игрок: его места
+        сразу попадают в left_seats при старте матча (см. start_match)."""
+        room = await self.room_repo.get(room_id)
+        if not room:
+            raise NotFound("Room not found")
+        if room.created_by != user.id:
+            raise Conflict("Only room creator can add bots")
+        if room.status != RoomStatus.LOBBY:
+            raise Conflict("Match already started")
+
+        players = await self.room_repo.get_players(room.id)
+        if len(players) >= room.max_players:
+            raise Conflict("Room is full")
+
+        bot_count = 0
+        for p in players:
+            u = await self.user_repo.get(str(p.user_id))
+            if u and u.user_type == UserType.BOT:
+                bot_count += 1
+
+        bot = await self.user_repo.create(
+            user_type=UserType.BOT, telegram_username=f"Бот {bot_count + 1}", balance=0
+        )
+        await self.room_repo.add_player(room_id=room.id, user_id=bot.id, seat_index=len(players))
+        poker_log.info("Bot added to room {} (seat {})", room.join_code, len(players))
+        pub = await self.get_public(str(room.id))
+        await channels.publish_lobby(pub)
+        return pub
+
     async def leave_room(self, user: UserModel, room_id: str) -> dict:
         room = await self.room_repo.get(room_id)
         if not room:
@@ -169,6 +201,7 @@ class PokerService:
             raise Conflict(f"Need at least {rules.min_players} players (have {n})")
 
         seats = []
+        bot_seats = []
         for p in players:
             u = await self.user_repo.get(str(p.user_id))
             username = (u.telegram_username if u else None) or f"Player{p.seat_index}"
@@ -177,7 +210,10 @@ class PokerService:
                 "user_id": str(p.user_id),
                 "username": username,
                 "score": 0,
+                "is_bot": bool(u and u.user_type == UserType.BOT),
             })
+            if u and u.user_type == UserType.BOT:
+                bot_seats.append(p.seat_index)
 
         starting_dealer = random.randrange(n)
         state = engine.new_game_state(
@@ -186,6 +222,8 @@ class PokerService:
             rules_config=edition.config if edition else None,
             starting_dealer=starting_dealer,
         )
+        if bot_seats:
+            state["left_seats"] = bot_seats
 
         # Персист первой раздачи + прогресс комнаты.
         round_row = await self.round_repo.create_from_state(room.id, 0, state["round"])
@@ -289,6 +327,7 @@ class PokerService:
                 "user_id": str(p.user_id),
                 "username": username,
                 "score": p.score,
+                "is_bot": bool(u and u.user_type == UserType.BOT),
             })
         return {
             "room_id": str(room.id),

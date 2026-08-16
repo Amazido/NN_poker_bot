@@ -74,6 +74,18 @@ async def start_match(
         raise _handle(e) from e
 
 
+@router.post("/{room_id}/bots", summary="Добавить бота на свободное место (только хост, только в лобби)")
+async def add_bot(
+    room_id: str,
+    user: UserModel = Depends(get_current_user),
+    service=Depends(get_poker_service),
+):
+    try:
+        return await service.add_bot(user, room_id)
+    except (NotFound, Conflict, InvalidMove) as e:
+        raise _handle(e) from e
+
+
 @router.post("/{room_id}/leave", summary="Покинуть комнату (в лобби — уйти совсем; в матче — доиграет авто-ход)")
 async def leave_room(
     room_id: str,

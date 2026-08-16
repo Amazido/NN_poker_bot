@@ -32,6 +32,7 @@ from app.db.base import Base
 class UserType:
     TELEGRAM = "telegram"
     DEV = "dev"
+    BOT = "bot"
 
 
 class UserStatus:

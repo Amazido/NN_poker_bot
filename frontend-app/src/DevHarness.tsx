@@ -71,6 +71,7 @@ export default function App() {
               myUserId={resolved.view.seats[0]?.user_id ?? ''}
               onStart={() => console.log('start')}
               onLeave={() => console.log('leave')}
+              onAddBot={() => console.log('add bot')}
             />
           )}
           {resolved.type === 'bidding' && <BiddingScreen view={resolved.view} onBid={(n) => console.log('bid', n)} />}

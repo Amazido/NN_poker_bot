@@ -18,6 +18,11 @@ export function leaveRoomApi(roomId: string): Promise<PublicView> {
   return apiFetch<PublicView>(`/rooms/${roomId}/leave`, { method: 'POST' });
 }
 
+/** Только хост, только в лобби — добавляет бота на свободное место. */
+export function addBot(roomId: string): Promise<PublicView> {
+  return apiFetch<PublicView>(`/rooms/${roomId}/bots`, { method: 'POST' });
+}
+
 export function bid(roomId: string, value: number): Promise<PublicView> {
   return apiFetch<PublicView>(`/rooms/${roomId}/action`, {
     method: 'POST',

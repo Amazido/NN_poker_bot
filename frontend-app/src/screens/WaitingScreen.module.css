@@ -73,6 +73,21 @@
   opacity: 0.45;
   cursor: not-allowed;
 }
+.secondaryBtn {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 13.5px;
+  padding: 12px;
+  border-radius: 13px;
+  cursor: pointer;
+  text-align: center;
+}
+.secondaryBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 .hostHint {
   text-align: center;
   font-size: 12px;

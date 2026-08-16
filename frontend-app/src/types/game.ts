@@ -5,6 +5,7 @@ export interface Seat {
   user_id: string;
   username: string;
   score: number;
+  is_bot?: boolean;
 }
 
 export interface TrickPlay {

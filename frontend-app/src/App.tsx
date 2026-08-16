@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import styles from './App.module.css';
 import { ensureLoggedIn, getMe } from './api/auth';
 import { clearToken, ApiError } from './api/http';
-import { createRoom, joinRoom, startMatch, bid, playCard, leaveRoomApi } from './api/rooms';
+import { createRoom, joinRoom, startMatch, bid, playCard, leaveRoomApi, addBot } from './api/rooms';
 import { useGameView } from './api/useGameView';
 import { getTelegramWebApp, getStartParam } from './api/telegram';
 import { resolveScreen } from './screen-resolver';
@@ -114,6 +114,19 @@ export default function App() {
     }
   }
 
+  async function handleAddBot() {
+    if (!roomId) return;
+    setBusy(true);
+    setActionError(null);
+    try {
+      await addBot(roomId);
+    } catch (e) {
+      setActionError(actionErrorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleBid(n: number) {
     if (!roomId) return;
     try {
@@ -165,6 +178,7 @@ export default function App() {
           myUserId={myUserId}
           onStart={handleStart}
           onLeave={leaveRoom}
+          onAddBot={handleAddBot}
           starting={busy}
           startError={actionError}
         />

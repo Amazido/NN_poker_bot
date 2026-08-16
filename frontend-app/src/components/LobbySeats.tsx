@@ -33,7 +33,7 @@ export function LobbySeats({ seats, maxPlayers, meSeat }: { seats: Seat[]; maxPl
               {seat.username}
               {isMe ? ' (ты)' : ''}
             </div>
-            <div className={styles.seatSub}>{i === 0 ? 'хост' : 'за столом'}</div>
+            <div className={styles.seatSub}>{seat.is_bot ? 'бот' : i === 0 ? 'хост' : 'за столом'}</div>
           </div>
         );
       })}
