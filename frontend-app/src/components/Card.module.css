@@ -1,0 +1,114 @@
+.card {
+  width: 56px;
+  height: 80px;
+  border-radius: 8px;
+  background: var(--card-bg);
+  position: relative;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  flex: 0 0 auto;
+  transition: transform 0.15s ease;
+}
+.sm {
+  width: 40px;
+  height: 57px;
+  border-radius: 6px;
+}
+.playable {
+  cursor: pointer;
+}
+.playable:hover {
+  transform: translateY(-8px);
+}
+.disabled {
+  filter: grayscale(0.5);
+  opacity: 0.5;
+}
+
+.corner {
+  position: absolute;
+  top: 4px;
+  left: 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+.cornerBr {
+  composes: corner;
+  top: auto;
+  left: auto;
+  bottom: 4px;
+  right: 5px;
+  transform: rotate(180deg);
+}
+.rank {
+  font-family: 'Unbounded', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+}
+.sm .rank {
+  font-size: 9.5px;
+}
+.miniSuit {
+  width: 9px;
+  height: 9px;
+  margin-top: 1px;
+}
+.sm .miniSuit {
+  width: 7px;
+  height: 7px;
+}
+.miniSuit.joker {
+  width: 16px;
+  height: 16px;
+  margin-top: 0;
+}
+.sm .miniSuit.joker {
+  width: 12px;
+  height: 12px;
+}
+.pipCenter {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pipCenter svg {
+  width: 30px;
+  height: 30px;
+}
+.sm .pipCenter svg {
+  width: 20px;
+  height: 20px;
+}
+
+.back {
+  width: 56px;
+  height: 80px;
+  border-radius: 8px;
+  position: relative;
+  flex: 0 0 auto;
+  background: repeating-linear-gradient(135deg, var(--card-back-a) 0 6px, var(--card-back-b) 6px 12px);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.back svg {
+  width: 22px;
+  height: 22px;
+  opacity: 0.55;
+}
+.backSm {
+  composes: back;
+  width: 12px;
+  height: 17px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+.backSm svg {
+  display: none;
+}

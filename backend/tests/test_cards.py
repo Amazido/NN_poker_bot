@@ -1,4 +1,6 @@
 """Тесты колоды и старшинства во взятке."""
+import random
+
 from app.poker import cards as C
 
 
@@ -7,6 +9,21 @@ def test_deck_is_54_unique():
     assert len(deck) == 54
     assert len(set(deck)) == 54
     assert "XR" in deck and "XB" in deck
+
+
+def test_trump_card_never_dealt_into_a_hand():
+    """Вскрытая козырная карта не должна оказаться ни у кого на руках."""
+    for n_players in range(2, 6):
+        max_cards = (54 - 1) // n_players
+        for cards_count in (1, max_cards // 2 or 1, max_cards):
+            for seed in range(20):
+                hands, trump_card = C.deal(n_players, cards_count, rng=random.Random(seed))
+                dealt = [c for hand in hands for c in hand]
+                assert trump_card not in dealt, (
+                    f"trump {trump_card} leaked into a hand (n={n_players}, cards={cards_count}, seed={seed})"
+                )
+                assert len(dealt) == n_players * cards_count
+                assert len(set(dealt) | {trump_card}) == len(dealt) + 1  # все карты уникальны
 
 
 def test_on_color_joker_beats_everything():

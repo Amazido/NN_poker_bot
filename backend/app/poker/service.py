@@ -13,7 +13,7 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import Conflict, InvalidMove, NotFound
-from app.db.models import GameRoomModel, RoomStatus, UserModel
+from app.db.models import GameRoomModel, RoomStatus, UserModel, UserType
 from app.logger import poker_log
 from app.poker import channels, engine
 from app.poker import state as state_store
@@ -46,6 +46,10 @@ class PokerService:
         self.room_repo = room_repo
         self.round_repo = round_repo
 
+    # Дедлайн хода ушедшего игрока — не ждём полный turn_timeout_sec, чтобы не
+    # подвешивать оставшихся за столом (см. leave_room).
+    LEFT_SEAT_TIMEOUT_SEC = 2
+
     def _stamp_deadline(self, state: dict) -> None:
         """Проставить дедлайн текущего хода (для фонового авто-хода)."""
         kind, seat = engine.current_turn(state)
@@ -53,7 +57,9 @@ class PokerService:
             state["turn_deadline"] = None
             return
         rules = RulesEdition(state["rules"])
-        deadline = datetime.now(timezone.utc) + timedelta(seconds=rules.turn_timeout_sec)
+        left_seats = set(state.get("left_seats", []))
+        timeout = self.LEFT_SEAT_TIMEOUT_SEC if seat in left_seats else rules.turn_timeout_sec
+        deadline = datetime.now(timezone.utc) + timedelta(seconds=timeout)
         state["turn_deadline"] = deadline.isoformat()
 
     # === Комната ===
@@ -114,6 +120,68 @@ class PokerService:
         await channels.publish_lobby(pub)
         return pub
 
+    async def add_bot(self, user: UserModel, room_id: str) -> dict:
+        """Хост добавляет бота на свободное место (тестовая и «не хватает игроков» фича).
+
+        Бот доигрывает через тот же механизм, что и ушедший игрок: его места
+        сразу попадают в left_seats при старте матча (см. start_match)."""
+        room = await self.room_repo.get(room_id)
+        if not room:
+            raise NotFound("Room not found")
+        if room.created_by != user.id:
+            raise Conflict("Only room creator can add bots")
+        if room.status != RoomStatus.LOBBY:
+            raise Conflict("Match already started")
+
+        players = await self.room_repo.get_players(room.id)
+        if len(players) >= room.max_players:
+            raise Conflict("Room is full")
+
+        bot_count = 0
+        for p in players:
+            u = await self.user_repo.get(str(p.user_id))
+            if u and u.user_type == UserType.BOT:
+                bot_count += 1
+
+        bot = await self.user_repo.create(
+            user_type=UserType.BOT, telegram_username=f"Бот {bot_count + 1}", balance=0
+        )
+        await self.room_repo.add_player(room_id=room.id, user_id=bot.id, seat_index=len(players))
+        poker_log.info("Bot added to room {} (seat {})", room.join_code, len(players))
+        pub = await self.get_public(str(room.id))
+        await channels.publish_lobby(pub)
+        return pub
+
+    async def leave_room(self, user: UserModel, room_id: str) -> dict:
+        room = await self.room_repo.get(room_id)
+        if not room:
+            raise NotFound("Room not found")
+        player = await self.room_repo.get_player(room.id, user.id)
+        if not player:
+            raise Conflict("You are not seated in this room")
+
+        if room.status == RoomStatus.LOBBY:
+            await self.room_repo.remove_player_and_renumber(room.id, player.seat_index)
+            poker_log.info("User {} left lobby {}", user.id, room.join_code)
+            pub = await self.get_public(str(room.id))
+            await channels.publish_lobby(pub)
+            return pub
+
+        # Матч уже идёт: место остаётся (движок завязан на фиксированное n_players),
+        # но помечаем как "ушёл" — фоновый таймер станет доигрывать за него почти
+        # сразу (LEFT_SEAT_TIMEOUT_SEC), а не через полный turn_timeout_sec.
+        await self.room_repo.mark_left(room.id, user.id)
+        state = await state_store.load_state(room_id)
+        if state and not state.get("match_over"):
+            left = set(state.get("left_seats", []))
+            left.add(player.seat_index)
+            state["left_seats"] = sorted(left)
+            self._stamp_deadline(state)
+            await state_store.save_state(room_id, state)
+            await channels.publish_snapshot(state)
+        poker_log.info("User {} left active room {} (seat {} -> auto-play)", user.id, room.join_code, player.seat_index)
+        return await self.get_public(room_id)
+
     # === Старт матча ===
 
     async def start_match(self, user: UserModel, room_id: str) -> dict:
@@ -133,6 +201,7 @@ class PokerService:
             raise Conflict(f"Need at least {rules.min_players} players (have {n})")
 
         seats = []
+        bot_seats = []
         for p in players:
             u = await self.user_repo.get(str(p.user_id))
             username = (u.telegram_username if u else None) or f"Player{p.seat_index}"
@@ -141,7 +210,10 @@ class PokerService:
                 "user_id": str(p.user_id),
                 "username": username,
                 "score": 0,
+                "is_bot": bool(u and u.user_type == UserType.BOT),
             })
+            if u and u.user_type == UserType.BOT:
+                bot_seats.append(p.seat_index)
 
         starting_dealer = random.randrange(n)
         state = engine.new_game_state(
@@ -150,6 +222,8 @@ class PokerService:
             rules_config=edition.config if edition else None,
             starting_dealer=starting_dealer,
         )
+        if bot_seats:
+            state["left_seats"] = bot_seats
 
         # Персист первой раздачи + прогресс комнаты.
         round_row = await self.round_repo.create_from_state(room.id, 0, state["round"])
@@ -253,6 +327,7 @@ class PokerService:
                 "user_id": str(p.user_id),
                 "username": username,
                 "score": p.score,
+                "is_bot": bool(u and u.user_type == UserType.BOT),
             })
         return {
             "room_id": str(room.id),

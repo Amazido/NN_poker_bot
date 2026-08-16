@@ -1,0 +1,89 @@
+.header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 16px 18px 10px;
+}
+.brand {
+  font-family: 'Unbounded', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.01em;
+}
+.brand small {
+  display: block;
+  font-family: 'Golos Text', system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 10.5px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-top: 1px;
+}
+.headerActions {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 6px;
+}
+.leaveBtn {
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 12px;
+  padding: 6px 11px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.leaveBtn:hover {
+  color: var(--bad);
+  border-color: var(--bad);
+}
+.scoresBtn {
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 12px;
+  padding: 6px 11px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.scoresBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.statusBar {
+  flex: 0 0 auto;
+  padding: 0 18px 12px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  padding: 5px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.pillTrump {
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: var(--accent);
+}
+.pill svg {
+  width: 13px;
+  height: 13px;
+  display: block;
+}

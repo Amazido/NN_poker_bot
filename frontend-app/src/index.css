@@ -1,0 +1,166 @@
+@font-face {
+  font-family: 'Unbounded';
+  font-style: normal;
+  font-weight: 500 800;
+  font-display: swap;
+  src: url('./assets/fonts/unbounded-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Unbounded';
+  font-style: normal;
+  font-weight: 500 800;
+  font-display: swap;
+  src: url('./assets/fonts/unbounded-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122;
+}
+@font-face {
+  font-family: 'Golos Text';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('./assets/fonts/golos-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Golos Text';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('./assets/fonts/golos-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122;
+}
+
+:root {
+  --bg: #eef0f4;
+  --studio: #e3e6ee;
+  --surface: #ffffff;
+  --surface-2: #e7eaf1;
+  --felt: #dee2ea;
+  --line: #d7dbe4;
+  --ink: #1c2029;
+  --muted: #666f82;
+  --muted-2: #97a0b3;
+  --accent: #b8791f;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(184, 121, 31, 0.14);
+  --good: #1f9d7c;
+  --bad: #c73f47;
+  --card-bg: #fffdf8;
+  --card-ink: #23242b;
+  --card-red: #a23434;
+  --card-back-a: #3d4a63;
+  --card-back-b: #2e3a50;
+  --card-back-mark: rgba(255, 255, 255, 0.14);
+  --shadow-lg: 0 20px 48px rgba(23, 28, 42, 0.16);
+  --shadow-sm: 0 2px 8px rgba(23, 28, 42, 0.1);
+  --focus: #2f6fed;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e1117;
+    --studio: #0a0c11;
+    --surface: #1a1f2b;
+    --surface-2: #212836;
+    --felt: #1b212c;
+    --line: #2c3446;
+    --ink: #e9ecf3;
+    --muted: #8b93a7;
+    --muted-2: #5b6376;
+    --accent: #e3a640;
+    --accent-ink: #201405;
+    --accent-soft: rgba(227, 166, 64, 0.16);
+    --good: #4fd1ae;
+    --bad: #e5646b;
+    --card-bg: #f6f1e6;
+    --card-ink: #23242b;
+    --card-red: #a9393a;
+    --card-back-a: #38415a;
+    --card-back-b: #262e3f;
+    --card-back-mark: rgba(255, 255, 255, 0.08);
+    --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.5);
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
+    --focus: #6ea1ff;
+  }
+}
+:root[data-theme='light'] {
+  --bg: #eef0f4;
+  --studio: #e3e6ee;
+  --surface: #ffffff;
+  --surface-2: #e7eaf1;
+  --felt: #dee2ea;
+  --line: #d7dbe4;
+  --ink: #1c2029;
+  --muted: #666f82;
+  --muted-2: #97a0b3;
+  --accent: #b8791f;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(184, 121, 31, 0.14);
+  --good: #1f9d7c;
+  --bad: #c73f47;
+  --card-bg: #fffdf8;
+  --card-ink: #23242b;
+  --card-red: #a23434;
+  --card-back-a: #3d4a63;
+  --card-back-b: #2e3a50;
+  --card-back-mark: rgba(255, 255, 255, 0.14);
+  --shadow-lg: 0 20px 48px rgba(23, 28, 42, 0.16);
+  --shadow-sm: 0 2px 8px rgba(23, 28, 42, 0.1);
+  --focus: #2f6fed;
+}
+:root[data-theme='dark'] {
+  --bg: #0e1117;
+  --studio: #0a0c11;
+  --surface: #1a1f2b;
+  --surface-2: #212836;
+  --felt: #1b212c;
+  --line: #2c3446;
+  --ink: #e9ecf3;
+  --muted: #8b93a7;
+  --muted-2: #5b6376;
+  --accent: #e3a640;
+  --accent-ink: #201405;
+  --accent-soft: rgba(227, 166, 64, 0.16);
+  --good: #4fd1ae;
+  --bad: #e5646b;
+  --card-bg: #f6f1e6;
+  --card-ink: #23242b;
+  --card-red: #a9393a;
+  --card-back-a: #38415a;
+  --card-back-b: #262e3f;
+  --card-back-mark: rgba(255, 255, 255, 0.08);
+  --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --focus: #6ea1ff;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Golos Text', system-ui, sans-serif;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+button {
+  font-family: inherit;
+}
+button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}

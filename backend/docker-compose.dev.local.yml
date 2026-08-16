@@ -1,0 +1,10 @@
+# Локальный оверрайд (не коммитим): на этой машине уже есть нативные postgres/redis
+# на 5432/6379, поэтому dev-контейнеры пробрасываем на другие хостовые порты.
+# Запуск: docker compose -f docker-compose.dev.yml -f docker-compose.dev.local.yml up -d
+services:
+  postgres-dev:
+    ports:
+      - "5433:5432"
+  redis-dev:
+    ports:
+      - "6380:6379"

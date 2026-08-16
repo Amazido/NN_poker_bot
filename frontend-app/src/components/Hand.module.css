@@ -1,0 +1,36 @@
+.tray {
+  flex: 0 0 auto;
+  padding: 10px 0 18px;
+  position: relative;
+}
+.row {
+  display: flex;
+  justify-content: center;
+  padding: 0 18px;
+}
+.slot {
+  margin-left: -14px;
+}
+.slot:first-child {
+  margin-left: 0;
+}
+.scorePop {
+  position: absolute;
+  right: 18px;
+  top: -4px;
+  transform: translateY(-100%);
+  font-family: 'Unbounded', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 14px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.scorePopGood {
+  background: var(--good);
+  color: #fff;
+}
+.scorePopBad {
+  background: var(--bad);
+  color: #fff;
+}
