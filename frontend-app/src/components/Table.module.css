@@ -56,10 +56,9 @@
 }
 
 .tableWrap {
-  flex: 1 1 auto;
   position: relative;
-  margin: 0 10px;
-  min-height: 220px;
+  width: 100%;
+  height: 100%;
 }
 .tableOval {
   position: absolute;
@@ -239,16 +238,4 @@
   background: var(--surface-2);
   color: var(--ink);
   border: 1px solid var(--line);
-}
-.oppCardsMini {
-  display: flex;
-  justify-content: center;
-  margin-top: 4px;
-  height: 20px;
-}
-.oppCardsMini > :global(*) {
-  margin-left: -6px;
-}
-.oppCardsMini > :global(*:first-child) {
-  margin-left: 0;
 }

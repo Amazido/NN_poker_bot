@@ -64,7 +64,7 @@ export default function App() {
       </div>
 
       <div className={styles.stage}>
-        <div className={styles.phone}>
+        <div className={styles.column}>
           {resolved.type === 'waiting' && (
             <WaitingScreen
               view={resolved.view}

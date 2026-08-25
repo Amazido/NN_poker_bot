@@ -57,7 +57,7 @@ export function makeFixture(screenType: FixtureScreen, n: number): GameView {
   }
 
   if (screenType === 'bidding') {
-    const bidTurnIdx = Math.min(n - 1, Math.floor(n / 2));
+    const bidTurnIdx = meSeat;
     const bids: Record<string, number> = {};
     for (let i = 0; i < bidTurnIdx; i++) bids[i] = i % (cardsCount + 1);
     const myTurn = bidTurnIdx === meSeat;

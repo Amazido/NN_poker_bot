@@ -32,6 +32,10 @@
 }
 
 :root {
+  /* Рабочая колонка как в TG-game: ширина фиксирована, баблы матча — тоже. */
+  --stage-w: 360px;
+  --table-bubble-h: 300px;
+  --control-bubble-h: 216px;
   --bg: #eef0f4;
   --studio: #e3e6ee;
   --surface: #ffffff;

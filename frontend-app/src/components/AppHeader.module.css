@@ -4,7 +4,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 16px 18px 10px;
+  padding: 4px 4px 0;
 }
 .brand {
   font-family: 'Unbounded', system-ui, sans-serif;
@@ -59,10 +59,13 @@
 }
 .statusBar {
   flex: 0 0 auto;
-  padding: 0 18px 12px;
+  height: 32px;
+  padding: 0 4px;
   display: flex;
   gap: 6px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  align-items: center;
 }
 .pill {
   display: inline-flex;

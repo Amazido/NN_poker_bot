@@ -1,10 +1,12 @@
-import { AppHeader, Pill, StatusBar, TrumpPill } from '../components/AppHeader';
+import { Pill, TrumpPill } from '../components/AppHeader';
 import { GameTable } from '../components/GameTable';
 import { Hand } from '../components/Hand';
-import { WaitingTurnNote, YourTurnBanner } from '../components/BidPad';
+import { PlayHint, WaitingTurnNote } from '../components/BidPad';
 import { ScoreboardModal, useScoreboard } from '../components/Scoreboard';
 import { sortHand } from '../lib/cards';
 import type { CardCode, GameView, RoundScoreEvent } from '../types/game';
+import { MatchLayout } from './MatchLayout';
+import matchStyles from './MatchLayout.module.css';
 
 export interface PlayingScreenProps {
   view: GameView;
@@ -29,26 +31,37 @@ export function PlayingScreen({ view, onPlay, onLeave, lastRoundScore, roomCode 
 
   return (
     <>
-      <AppHeader roomCode={roomCode ?? view.room_id} onLeave={onLeave ? handleLeave : undefined} onShowScores={scoreboard.show} />
-      <StatusBar>
-        {view.rounds_total && (
-          <Pill>
-            Раздача {view.round_index + 1}/{view.rounds_total}
-          </Pill>
-        )}
-        <TrumpPill round={r} />
-        <Pill>{r.cards_count} карт</Pill>
-        {r.dealer_seat === me.seat && <Pill>Ты сдаёшь</Pill>}
-      </StatusBar>
-      <GameTable view={view} mode="playing" lastRoundScore={lastRoundScore} />
-      {me.your_turn ? (
-        <YourTurnBanner deadline={view.turn_deadline} />
-      ) : (
-        <WaitingTurnNote>
-          Ходит: <b>{turnName}</b>
-        </WaitingTurnNote>
-      )}
-      <Hand cards={sortHand(me.hand, r.trump_suit)} legal={legal} onPlay={onPlay} scoreDelta={myDelta} />
+      <MatchLayout
+      roomCode={roomCode ?? view.room_id}
+      onLeave={onLeave ? handleLeave : undefined}
+      onShowScores={scoreboard.show}
+      status={
+        <>
+          {view.rounds_total && (
+            <Pill>
+              Раздача {view.round_index + 1}/{view.rounds_total}
+            </Pill>
+          )}
+          <TrumpPill round={r} />
+          <Pill>{r.cards_count} карт</Pill>
+        </>
+      }
+      table={<GameTable view={view} mode="playing" lastRoundScore={lastRoundScore} />}
+      controls={
+        <>
+          <div className={matchStyles.controlTop}>
+            {me.your_turn ? (
+              <PlayHint deadline={view.turn_deadline}>Сбрось карту</PlayHint>
+            ) : (
+              <WaitingTurnNote>
+                Ходит: <b>{turnName}</b>
+              </WaitingTurnNote>
+            )}
+          </div>
+          <Hand cards={sortHand(me.hand, r.trump_suit)} legal={legal} onPlay={onPlay} scoreDelta={myDelta} />
+        </>
+      }
+      />
       {scoreboard.open && <ScoreboardModal seats={view.seats} onClose={scoreboard.hide} />}
     </>
   );

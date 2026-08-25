@@ -1,10 +1,12 @@
-import { AppHeader, Pill, StatusBar, TrumpPill } from '../components/AppHeader';
+import { Pill, TrumpPill } from '../components/AppHeader';
 import { GameTable } from '../components/GameTable';
 import { Hand } from '../components/Hand';
-import { BidPad, WaitingTurnNote, YourTurnBanner } from '../components/BidPad';
+import { BidPad, WaitingTurnNote } from '../components/BidPad';
 import { ScoreboardModal, useScoreboard } from '../components/Scoreboard';
 import { sortHand } from '../lib/cards';
 import type { GameView, RoundScoreEvent } from '../types/game';
+import { MatchLayout } from './MatchLayout';
+import matchStyles from './MatchLayout.module.css';
 
 export interface BiddingScreenProps {
   view: GameView;
@@ -28,29 +30,37 @@ export function BiddingScreen({ view, onBid, onLeave, lastRoundScore, roomCode }
 
   return (
     <>
-      <AppHeader roomCode={roomCode ?? view.room_id} onLeave={onLeave ? handleLeave : undefined} onShowScores={scoreboard.show} />
-      <StatusBar>
-        {view.rounds_total && (
-          <Pill>
-            Раздача {view.round_index + 1}/{view.rounds_total}
-          </Pill>
-        )}
-        <TrumpPill round={r} />
-        <Pill>{r.cards_count} карт</Pill>
-        {r.dealer_seat === me.seat && <Pill>Ты сдаёшь</Pill>}
-      </StatusBar>
-      <GameTable view={view} mode="bidding" lastRoundScore={lastRoundScore} />
-      {me.your_turn && me.available_actions?.type === 'bid' ? (
+      <MatchLayout
+      roomCode={roomCode ?? view.room_id}
+      onLeave={onLeave ? handleLeave : undefined}
+      onShowScores={scoreboard.show}
+      status={
         <>
-          <YourTurnBanner deadline={view.turn_deadline} />
-          <BidPad maxBid={r.cards_count} options={me.available_actions.options} onBid={onBid} />
+          {view.rounds_total && (
+            <Pill>
+              Раздача {view.round_index + 1}/{view.rounds_total}
+            </Pill>
+          )}
+          <TrumpPill round={r} />
+          <Pill>{r.cards_count} карт</Pill>
         </>
-      ) : (
-        <WaitingTurnNote>
-          Ход заказа: <b>{bidderName}</b>
-        </WaitingTurnNote>
-      )}
-      <Hand cards={sortHand(me.hand, r.trump_suit)} scoreDelta={myDelta} />
+      }
+      table={<GameTable view={view} mode="bidding" lastRoundScore={lastRoundScore} />}
+      controls={
+        <>
+          <div className={matchStyles.controlTop}>
+            {me.your_turn && me.available_actions?.type === 'bid' ? (
+              <BidPad maxBid={r.cards_count} options={me.available_actions.options} onBid={onBid} />
+            ) : (
+              <WaitingTurnNote>
+                Ход заказа: <b>{bidderName}</b>
+              </WaitingTurnNote>
+            )}
+          </div>
+          <Hand cards={sortHand(me.hand, r.trump_suit)} scoreDelta={myDelta} />
+        </>
+      }
+      />
       {scoreboard.open && <ScoreboardModal seats={view.seats} onClose={scoreboard.hide} />}
     </>
   );

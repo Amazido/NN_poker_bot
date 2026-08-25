@@ -215,7 +215,7 @@ export default function App() {
   return (
     <div className={styles.page}>
       <div className={styles.stage}>
-        <div className={styles.phone}>{body}</div>
+        <div className={styles.column}>{body}</div>
       </div>
     </div>
   );

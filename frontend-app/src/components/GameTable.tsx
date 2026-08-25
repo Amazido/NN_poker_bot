@@ -1,37 +1,27 @@
-import { seatArcPositions } from '../lib/layout';
-import { useElementSize } from '../lib/useElementSize';
+import { STAGE_W, TABLE_BUBBLE_H, seatArcPositions } from '../lib/layout';
 import type { GameView, RoundScoreEvent, Seat } from '../types/game';
-import { Card, CardBack } from './Card';
+import { Card } from './Card';
 import { TurnTimer } from './TurnTimer';
 import styles from './Table.module.css';
-
-// используются, пока ResizeObserver ещё не измерил реальный контейнер
-const FALLBACK_W = 358;
-const FALLBACK_H = 264;
 
 function badgeClass(kind: 'turn' | 'waiting' | 'done') {
   return `${styles.oppBadge} ${styles[kind]}`;
 }
 
+function TrickLine({ won, bid }: { won: number; bid: number | undefined }) {
+  return (
+    <div className={styles.oppMeta}>
+      взял <b>{won}</b>/{bid ?? '—'}
+    </div>
+  );
+}
+
 function BiddingBadge({ view, seat }: { view: GameView; seat: number }) {
   const r = view.round!;
   const bid = r.bids[seat];
-  if (bid !== undefined) return <span className={badgeClass('done')}>Заказал {bid}</span>;
+  if (bid !== undefined) return null;
   if (r.bid_turn === seat) return <span className={badgeClass('turn')}>Думает…</span>;
   return <span className={badgeClass('waiting')}>Ожидает</span>;
-}
-
-function PlayingMeta({ view, seat }: { view: GameView; seat: number }) {
-  const r = view.round!;
-  const isTurn = r.current_trick?.turn === seat;
-  return (
-    <>
-      <div className={styles.oppMeta}>
-        заказ <b>{r.bids[seat] ?? '—'}</b> · взял <b>{r.tricks_won[seat] ?? 0}</b>
-      </div>
-      {isTurn && <span className={badgeClass('turn')}>Ходит</span>}
-    </>
-  );
 }
 
 function OpponentSeat({
@@ -48,10 +38,11 @@ function OpponentSeat({
   scoreDelta: number | null;
 }) {
   const r = view.round!;
-  const count = r.hand_counts[seat.seat] ?? 0;
   const isTurn = mode === 'bidding' ? r.bid_turn === seat.seat : r.current_trick?.turn === seat.seat;
   const hasLeft = view.left_seats?.includes(seat.seat) ?? false;
   const isDealer = r.dealer_seat === seat.seat;
+  const bid = r.bids[seat.seat];
+  const won = r.tricks_won[seat.seat] ?? 0;
 
   return (
     <div className={`${styles.oppSeat} ${isTurn ? styles.turn : ''}`} style={{ left: point.x, top: point.y }}>
@@ -76,21 +67,13 @@ function OpponentSeat({
         )}
       </div>
       <div className={styles.oppName}>{seat.username}</div>
-      {mode === 'playing' && !hasLeft && <PlayingMeta view={view} seat={seat.seat} />}
-      {mode === 'playing' && hasLeft && (
-        <div className={styles.oppMeta}>
-          заказ <b>{r.bids[seat.seat] ?? '—'}</b> · взял <b>{r.tricks_won[seat.seat] ?? 0}</b>
-        </div>
-      )}
-      <div className={styles.oppCardsMini}>
-        {Array.from({ length: Math.min(count, 7) }).map((_, i) => (
-          <CardBack key={i} size="sm" />
-        ))}
-      </div>
+      {bid !== undefined && <TrickLine won={won} bid={bid} />}
       {hasLeft ? (
         <span className={badgeClass('waiting')}>Вышел · авто-ход</span>
+      ) : mode === 'bidding' ? (
+        <BiddingBadge view={view} seat={seat.seat} />
       ) : (
-        mode === 'bidding' && <BiddingBadge view={view} seat={seat.seat} />
+        isTurn && <span className={badgeClass('turn')}>Ходит</span>
       )}
     </div>
   );
@@ -164,12 +147,11 @@ export function GameTable({
   mode: 'bidding' | 'playing';
   lastRoundScore?: RoundScoreEvent | null;
 }) {
-  const [wrapRef, size] = useElementSize<HTMLDivElement>();
   const opponents = view.seats.filter((s) => s.seat !== view.me!.seat);
-  const points = seatArcPositions(opponents.length, size.width || FALLBACK_W, size.height || FALLBACK_H);
+  const points = seatArcPositions(opponents.length, STAGE_W, TABLE_BUBBLE_H);
 
   return (
-    <div className={styles.tableWrap} ref={wrapRef}>
+    <div className={styles.tableWrap}>
       <div className={styles.tableOval} />
       {opponents.map((seat, i) => (
         <OpponentSeat
