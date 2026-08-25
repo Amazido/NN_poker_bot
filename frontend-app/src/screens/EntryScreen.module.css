@@ -33,12 +33,35 @@
   font-weight: 700;
   font-size: 14px;
 }
-.row {
+.tabs {
   display: flex;
-  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 4px;
+  gap: 4px;
+  box-shadow: var(--shadow-sm);
+}
+.tab,
+.tabActive {
+  flex: 1 1 0;
+  border: 0;
+  font-weight: 700;
+  font-size: 13.5px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.tab {
+  background: transparent;
+  color: var(--muted);
+}
+.tabActive {
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 .input {
-  flex: 1 1 auto;
+  width: 100%;
   border: 1px solid var(--line);
   background: var(--surface-2);
   color: var(--ink);

@@ -1,7 +1,6 @@
-import { STAGE_W, TABLE_BUBBLE_H, seatArcPositions } from '../lib/layout';
+import { STAGE_W, TABLE_BUBBLE_H, seatTablePositions } from '../lib/layout';
 import type { GameView, RoundScoreEvent, Seat } from '../types/game';
 import { Card } from './Card';
-import { TurnTimer } from './TurnTimer';
 import styles from './Table.module.css';
 
 function badgeClass(kind: 'turn' | 'waiting' | 'done') {
@@ -47,11 +46,6 @@ function OpponentSeat({
   return (
     <div className={`${styles.oppSeat} ${isTurn ? styles.turn : ''}`} style={{ left: point.x, top: point.y }}>
       <div className={styles.avatarWrap}>
-        {isTurn && view.turn_deadline && (
-          <div className={styles.timerOverlay}>
-            <TurnTimer deadline={view.turn_deadline} size={40} />
-          </div>
-        )}
         <div className={`${styles.avatar} ${styles.oppAvatar}`} style={hasLeft ? { opacity: 0.5 } : undefined}>
           {seat.username[0]}
         </div>
@@ -75,6 +69,35 @@ function OpponentSeat({
       ) : (
         isTurn && <span className={badgeClass('turn')}>Ходит</span>
       )}
+    </div>
+  );
+}
+
+function SelfSeat({
+  view,
+  point,
+  mode,
+}: {
+  view: GameView;
+  point: { x: number; y: number };
+  mode: 'bidding' | 'playing';
+}) {
+  const r = view.round!;
+  const me = view.me!;
+  const isTurn = mode === 'bidding' ? r.bid_turn === me.seat : r.current_trick?.turn === me.seat;
+  const isDealer = r.dealer_seat === me.seat;
+
+  return (
+    <div className={`${styles.oppSeat} ${isTurn ? styles.turn : ''}`} style={{ left: point.x, top: point.y }}>
+      <div className={styles.avatarWrap}>
+        <div className={`${styles.avatar} ${styles.oppAvatar}`}>{view.seats.find((s) => s.seat === me.seat)?.username[0] ?? 'В'}</div>
+        {isDealer && (
+          <span className={styles.dealerChip} title="Сдаёшь">
+            Д
+          </span>
+        )}
+      </div>
+      <div className={styles.oppName}>вы</div>
     </div>
   );
 }
@@ -147,22 +170,24 @@ export function GameTable({
   mode: 'bidding' | 'playing';
   lastRoundScore?: RoundScoreEvent | null;
 }) {
-  const opponents = view.seats.filter((s) => s.seat !== view.me!.seat);
-  const points = seatArcPositions(opponents.length, STAGE_W, TABLE_BUBBLE_H);
+  const meSeat = view.me!.seat;
+  const points = seatTablePositions(Math.max(view.n_players, view.seats.length), STAGE_W, TABLE_BUBBLE_H, meSeat);
+  const opponents = view.seats.filter((s) => s.seat !== meSeat);
 
   return (
     <div className={styles.tableWrap}>
       <div className={styles.tableOval} />
-      {opponents.map((seat, i) => (
+      {opponents.map((seat) => (
         <OpponentSeat
           key={seat.seat}
           view={view}
           seat={seat}
           mode={mode}
-          point={points[i]}
+          point={points[seat.seat]}
           scoreDelta={lastRoundScore?.result[seat.seat]?.delta ?? null}
         />
       ))}
+      <SelfSeat view={view} point={points[meSeat]} mode={mode} />
       <CenterZone view={view} mode={mode} />
     </div>
   );

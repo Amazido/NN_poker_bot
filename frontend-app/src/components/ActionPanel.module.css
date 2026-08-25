@@ -50,7 +50,10 @@
   text-decoration: line-through;
 }
 .confirm {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   width: 100%;
   border: 0;
   background: var(--accent);

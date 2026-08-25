@@ -143,13 +143,6 @@
 .oppSeat.turn .oppAvatar {
   box-shadow: 0 0 0 3px var(--accent-soft), 0 0 0 1.5px var(--accent);
 }
-.timerOverlay {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-}
 .dealerChip {
   position: absolute;
   right: -4px;

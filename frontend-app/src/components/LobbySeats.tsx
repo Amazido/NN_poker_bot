@@ -1,16 +1,16 @@
-import { seatArcPositions } from '../lib/layout';
+import { seatTablePositions } from '../lib/layout';
 import { useElementSize } from '../lib/useElementSize';
 import type { Seat } from '../types/game';
 import styles from './Table.module.css';
 
-// используются, пока ResizeObserver ещё не измерил реальный контейнер
 const FALLBACK_W = 358;
 const FALLBACK_H = 300;
 
 export function LobbySeats({ seats, maxPlayers, meSeat }: { seats: Seat[]; maxPlayers: number; meSeat: number }) {
   const [wrapRef, size] = useElementSize<HTMLDivElement>();
   const slots: (Seat | null)[] = Array.from({ length: maxPlayers }, (_, i) => seats[i] ?? null);
-  const points = seatArcPositions(slots.length, size.width || FALLBACK_W, size.height || FALLBACK_H);
+  const origin = meSeat >= 0 ? meSeat : 0;
+  const points = seatTablePositions(slots.length, size.width || FALLBACK_W, size.height || FALLBACK_H, origin);
 
   return (
     <div className={styles.seatsWrap} ref={wrapRef}>

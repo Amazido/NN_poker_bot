@@ -7,29 +7,34 @@ export function AppHeader({
   roomCode,
   onLeave,
   onShowScores,
+  status,
 }: {
   roomCode: string;
   onLeave?: () => void;
   onShowScores?: () => void;
+  status?: ReactNode;
 }) {
   return (
     <div className={styles.header}>
-      <div className={styles.brand}>
-        Одесский покер
-        <small>стол №{roomCode}</small>
+      <div className={styles.headerTop}>
+        <div className={styles.brand}>
+          Одесский покер
+          <small>стол №{roomCode}</small>
+        </div>
+        <div className={styles.headerActions}>
+          {onShowScores && (
+            <button className={styles.scoresBtn} onClick={onShowScores}>
+              Счёт
+            </button>
+          )}
+          {onLeave && (
+            <button className={styles.leaveBtn} onClick={onLeave}>
+              Выйти
+            </button>
+          )}
+        </div>
       </div>
-      <div className={styles.headerActions}>
-        {onShowScores && (
-          <button className={styles.scoresBtn} onClick={onShowScores}>
-            Счёт
-          </button>
-        )}
-        {onLeave && (
-          <button className={styles.leaveBtn} onClick={onLeave}>
-            Выйти
-          </button>
-        )}
-      </div>
+      {status && <div className={styles.statusBar}>{status}</div>}
     </div>
   );
 }

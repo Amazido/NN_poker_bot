@@ -6,13 +6,11 @@
 .row {
   display: flex;
   justify-content: center;
-  padding: 0 18px;
+  padding: 0 8px;
+  overflow: hidden;
 }
 .slot {
-  margin-left: -14px;
-}
-.slot:first-child {
-  margin-left: 0;
+  flex: 0 0 auto;
 }
 .scorePop {
   position: absolute;

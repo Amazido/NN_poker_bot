@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { AppHeader, StatusBar } from '../components/AppHeader';
+import { AppHeader } from '../components/AppHeader';
 import styles from './MatchLayout.module.css';
 
 export function MatchLayout({
@@ -19,8 +19,7 @@ export function MatchLayout({
 }) {
   return (
     <div className={styles.match}>
-      <AppHeader roomCode={roomCode} onLeave={onLeave} onShowScores={onShowScores} />
-      <StatusBar>{status}</StatusBar>
+      <AppHeader roomCode={roomCode} onLeave={onLeave} onShowScores={onShowScores} status={status} />
       <div className={styles.tableBubble}>{table}</div>
       <div className={styles.controlBubble}>{controls}</div>
     </div>

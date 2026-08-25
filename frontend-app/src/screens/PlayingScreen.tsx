@@ -39,7 +39,7 @@ export function PlayingScreen({ view, onPlay, onLeave, lastRoundScore, roomCode 
         <>
           {view.rounds_total && (
             <Pill>
-              Раздача {view.round_index + 1}/{view.rounds_total}
+              Кон {view.round_index + 1}/{view.rounds_total}
             </Pill>
           )}
           <TrumpPill round={r} />
@@ -53,7 +53,7 @@ export function PlayingScreen({ view, onPlay, onLeave, lastRoundScore, roomCode 
             {me.your_turn ? (
               <PlayHint deadline={view.turn_deadline}>Сбрось карту</PlayHint>
             ) : (
-              <WaitingTurnNote>
+              <WaitingTurnNote deadline={view.turn_deadline}>
                 Ходит: <b>{turnName}</b>
               </WaitingTurnNote>
             )}

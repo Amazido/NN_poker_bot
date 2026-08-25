@@ -10,6 +10,7 @@ export interface EntryScreenProps {
 }
 
 export function EntryScreen({ onCreate, onJoin, busy, error }: EntryScreenProps) {
+  const [tab, setTab] = useState<'create' | 'join'>('create');
   const [code, setCode] = useState('');
 
   return (
@@ -21,27 +22,34 @@ export function EntryScreen({ onCreate, onJoin, busy, error }: EntryScreenProps)
           <div className={styles.subtitle}>Собери стол или войди по коду друга</div>
         </div>
 
-        <div className={styles.card}>
-          <div className={styles.cardTitle}>Новый стол</div>
-          <button className={styles.btnWide} disabled={busy} onClick={onCreate}>
-            Создать стол
+        <div className={styles.tabs}>
+          <button type="button" className={tab === 'create' ? styles.tabActive : styles.tab} onClick={() => setTab('create')}>
+            Создать
+          </button>
+          <button type="button" className={tab === 'join' ? styles.tabActive : styles.tab} onClick={() => setTab('join')}>
+            Присоединиться
           </button>
         </div>
 
         <div className={styles.card}>
-          <div className={styles.cardTitle}>Уже есть код</div>
-          <div className={styles.row}>
-            <input
-              className={styles.input}
-              placeholder="Код комнаты"
-              value={code}
-              maxLength={12}
-              onChange={(e) => setCode(e.target.value)}
-            />
-            <button className={styles.btn} disabled={busy || !code.trim()} onClick={() => onJoin(code)}>
-              Войти
+          {tab === 'create' ? (
+            <button className={styles.btnWide} disabled={busy} onClick={onCreate}>
+              Создать стол
             </button>
-          </div>
+          ) : (
+            <>
+              <input
+                className={styles.input}
+                placeholder="Код комнаты"
+                value={code}
+                maxLength={12}
+                onChange={(e) => setCode(e.target.value)}
+              />
+              <button className={styles.btnWide} disabled={busy || !code.trim()} onClick={() => onJoin(code)}>
+                Войти
+              </button>
+            </>
+          )}
         </div>
 
         {error && <div className={styles.error}>{error}</div>}

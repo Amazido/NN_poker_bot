@@ -38,7 +38,7 @@ export function BiddingScreen({ view, onBid, onLeave, lastRoundScore, roomCode }
         <>
           {view.rounds_total && (
             <Pill>
-              Раздача {view.round_index + 1}/{view.rounds_total}
+              Кон {view.round_index + 1}/{view.rounds_total}
             </Pill>
           )}
           <TrumpPill round={r} />
@@ -50,9 +50,9 @@ export function BiddingScreen({ view, onBid, onLeave, lastRoundScore, roomCode }
         <>
           <div className={matchStyles.controlTop}>
             {me.your_turn && me.available_actions?.type === 'bid' ? (
-              <BidPad maxBid={r.cards_count} options={me.available_actions.options} onBid={onBid} />
+              <BidPad maxBid={r.cards_count} options={me.available_actions.options} onBid={onBid} deadline={view.turn_deadline} />
             ) : (
-              <WaitingTurnNote>
+              <WaitingTurnNote deadline={view.turn_deadline}>
                 Ход заказа: <b>{bidderName}</b>
               </WaitingTurnNote>
             )}
