@@ -94,6 +94,15 @@ class Player:
         r.raise_for_status()
         return r.json()
 
+    async def public(self, room_id: str) -> dict:
+        r = await self.http.get(f"/rooms/{room_id}", headers=self.headers)
+        r.raise_for_status()
+        return r.json()
+
+    async def act(self, room_id: str, body: dict) -> None:
+        r = await self.http.post(f"/rooms/{room_id}/action", json=body, headers=self.headers)
+        r.raise_for_status()
+
 
 async def build_room(host: Player, guest: Player) -> tuple[str, int]:
     """Комната host + guest + бот, матч запущен. Возвращает (room_id, seat гостя)."""
@@ -104,6 +113,37 @@ async def build_room(host: Player, guest: Player) -> tuple[str, int]:
     await host.start(room_id)
     seat = (await guest.hand(room_id))["seat"]
     return room_id, seat
+
+
+async def nudge_room(room_id: str, players: list[Player], delay: float = 2.0) -> None:
+    """Сходить за того, чей сейчас ход, чтобы комната родила публикацию.
+
+    Нужно для контрольной половины проверки: мало убедиться, что чужая приватка
+    не приходит — своя обязана приходить.
+    """
+    await asyncio.sleep(delay)
+    by_seat = {}
+    for pl in players:
+        try:
+            by_seat[(await pl.hand(room_id))["seat"]] = pl
+        except Exception:  # noqa: BLE001
+            continue
+    pub = await players[0].public(room_id)
+    seat = pub["turn"]["seat"]
+    actor = by_seat.get(seat)
+    if actor is None:
+        print(f"  (ход за местом {seat} — не наш игрок, публикацию не триггерим)")
+        return
+    av = (await actor.hand(room_id))["available_actions"]
+    if not av:
+        return
+    body = (
+        {"action_type": "bid", "payload": {"bid": av["options"][0]}}
+        if av["type"] == "bid"
+        else {"action_type": "play_card", "payload": {"card": av["cards"][0]}}
+    )
+    await actor.act(room_id, body)
+    print(f"  (сходили за место {seat} в текущей комнате)")
 
 
 async def main() -> int:
@@ -148,6 +188,7 @@ async def main() -> int:
                     print(f"SUBSCRIBE ERROR ({ch}):", s["error"])
                     return 1
             print(f"listening {LISTEN_SEC:.0f}s on {ch_user} + room B channel")
+            nudge = asyncio.create_task(nudge_room(room_b, [p, q]))
 
             from_b = from_a = 0
             desync = 0
@@ -168,7 +209,13 @@ async def main() -> int:
                     public_b = (st.get("round_index"), (st.get("round") or {}).get("phase"))
                 elif channel == ch_user and data.get("type") == "private":
                     priv = data.get("private") or {}
-                    alien = priv.get("seat") != seat_b
+                    # Если бэк уже помечает приватку комнатой — верим ей; на старом
+                    # бэке (без room_id) отличаем по месту, оно в A и B разное.
+                    alien = (
+                        priv["room_id"] != room_b
+                        if priv.get("room_id")
+                        else priv.get("seat") != seat_b
+                    )
                     if alien:
                         from_a += 1
                     else:
@@ -180,14 +227,20 @@ async def main() -> int:
                     print(
                         f"  private seat={priv.get('seat')} "
                         f"round={priv.get('round_index')} phase={priv.get('phase')} "
+                        f"room_id={'—' if not priv.get('room_id') else priv['room_id'][:8]} "
                         f"{'<- ROOM A (alien)' if alien else '<- room B'}"
                     )
+
+            await nudge
 
             print(f"\nprivate from room B: {from_b}")
             print(f"private from room A: {from_a}")
             print(f"public/private desync (экран загрузки): {desync}")
             if from_a:
                 print("\nFAIL: приватка из покинутой комнаты течёт в личный канал")
+                return 1
+            if not from_b:
+                print("\nFAIL: своя приватка тоже не доходит — проверка не показательна")
                 return 1
             print("\nOK: личный канал отдаёт только текущую комнату")
             return 0
