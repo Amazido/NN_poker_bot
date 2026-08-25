@@ -98,6 +98,7 @@ export function makeFixture(screenType: FixtureScreen, n: number): GameView {
       left_seats: [],
       turn_deadline: null,
       me: {
+        room_id: 'r1',
         seat: meSeat,
         hand: hands[meSeat],
         your_turn: myTurn,
@@ -158,6 +159,7 @@ export function makeFixture(screenType: FixtureScreen, n: number): GameView {
     left_seats: [],
     turn_deadline: null,
     me: {
+      room_id: 'r1',
       seat: meSeat,
       hand: hands[meSeat],
       your_turn: myTurn,

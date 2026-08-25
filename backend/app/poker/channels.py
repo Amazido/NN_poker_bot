@@ -13,12 +13,20 @@ from app.poker.state import private_view, public_view
 
 
 async def publish_snapshot(state: GameState) -> None:
-    """Разослать актуальное состояние: публичное в комнату, приватное — каждому."""
+    """Разослать актуальное состояние: публичное в комнату, приватное — за столом.
+
+    Приватку не шлём на места из `left_seats` (ушедшие игроки и боты): руку
+    в комнате, которую человек покинул, ему смотреть незачем, а его личный канал
+    может слушать уже другая комната.
+    """
     room_id = state["room_id"]
     await safe_publish(ch_room(room_id), {"type": "state", "state": public_view(state)})
 
+    left = set(state.get("left_seats", []))
     tasks = []
     for s in state["seats"]:
+        if s["seat"] in left:
+            continue
         view = private_view(state, s["seat"])
         tasks.append(safe_publish(ch_user(s["user_id"]), {"type": "private", "private": view}))
     if tasks:

@@ -176,11 +176,39 @@ class PokerService:
             left = set(state.get("left_seats", []))
             left.add(player.seat_index)
             state["left_seats"] = sorted(left)
+            if self._is_abandoned(state):
+                await self._abandon_match(room, state)
+                poker_log.info("Room {} left by everyone -> match closed", room.join_code)
+                return await self.get_public(room_id)
             self._stamp_deadline(state)
             await state_store.save_state(room_id, state)
             await channels.publish_snapshot(state)
         poker_log.info("User {} left active room {} (seat {} -> auto-play)", user.id, room.join_code, player.seat_index)
         return await self.get_public(room_id)
+
+    @staticmethod
+    def _is_abandoned(state: dict) -> bool:
+        """За столом не осталось живых игроков — только ушедшие и боты."""
+        left = set(state.get("left_seats", []))
+        return all(s["seat"] in left or s.get("is_bot") for s in state["seats"])
+
+    async def _abandon_match(self, room: GameRoomModel, state: dict) -> None:
+        """Закрыть матч, доигрывать который некому.
+
+        Иначе фоновый авто-ход прокрутит все оставшиеся раздачи в пустоту, попутно
+        публикуя снапшоты — а это уже мешает тем, кто ушёл в новую комнату.
+        """
+        state["match_over"] = True
+        state["turn_deadline"] = None
+        await state_store.save_state(str(room.id), state)
+        await state_store.remove_active_room(str(room.id))
+        await self.room_repo.set_progress(
+            room.id,
+            round_index=state["round_index"],
+            current_round_id=None,
+            status=RoomStatus.FINISHED,
+        )
+        await channels.publish_snapshot(state)
 
     # === Старт матча ===
 
@@ -340,6 +368,8 @@ class PokerService:
             "round_index": room.round_index,
             "round": None,
             "turn": {"kind": None, "seat": None},
+            "left_seats": [],
+            "turn_deadline": None,
         }
 
     async def get_private(self, user: UserModel, room_id: str) -> dict:

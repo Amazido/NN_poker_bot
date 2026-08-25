@@ -20,6 +20,19 @@ function isMeFresh(view: GameView): boolean {
   return view.me.round_index === view.round_index && view.me.phase === (view.round?.phase ?? null);
 }
 
+/**
+ * Готов ли вид к отрисовке стола. На экранах, где своя рука не нужна (лобби,
+ * конец матча), — всегда да. Хук данных смотрит сюда же, чтобы при затянувшемся
+ * рассинхроне перезапросить пару public+private по REST (см. useGameView.ts).
+ */
+export function isViewReady(view: GameView): boolean {
+  if (view.status === 'lobby') return true;
+  if (view.match_over || view.status === 'finished') return true;
+  const phase = view.round?.phase;
+  if (phase === 'bidding' || phase === 'playing') return isMeFresh(view);
+  return true;
+}
+
 export function resolveScreen(view: GameView): AppScreen {
   if (view.status === 'lobby') return { type: 'waiting', view };
   if (view.match_over || view.status === 'finished') return { type: 'finished', view };

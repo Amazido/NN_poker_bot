@@ -128,6 +128,10 @@ def private_view(state: GameState, seat: int) -> Dict[str, Any]:
             available = {"type": "play", "cards": legal}
 
     return {
+        # Личный канал у игрока один на все комнаты, поэтому приватный вид обязан
+        # сам говорить, к какой комнате он относится: недоигранный матч иначе
+        # перебивает руку в текущем (см. журнал 2026-08-25).
+        "room_id": state["room_id"],
         "seat": seat,
         "hand": hand,
         "your_turn": available is not None,

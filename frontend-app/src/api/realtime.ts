@@ -61,14 +61,28 @@ export function connectRealtime(timeoutMs = 5000): Promise<Centrifuge> {
   return connectPromise;
 }
 
+// Сколько наших обработчиков висит на канале. Подписка в Centrifugo одна на канал,
+// поэтому снимаем её только когда ушёл последний — иначе быстрый ре-маунт (или
+// StrictMode) либо оборвёт живого слушателя, либо оставит второй, дублирующий.
+const listeners = new Map<string, number>();
+
 /** Подписка на канал с обработчиком публикаций. Возвращает функцию отписки. */
 export function subscribeChannel(channel: string, onData: (data: unknown) => void): () => void {
   if (!client) throw new Error('Centrifugo client не подключен — вызови connectRealtime() сначала');
   const existing = client.getSubscription(channel);
   const sub = existing ?? client.newSubscription(channel);
-  sub.on('publication', (ctx) => onData(ctx.data));
+  const handler = (ctx: { data: unknown }) => onData(ctx.data);
+  sub.on('publication', handler);
+  listeners.set(channel, (listeners.get(channel) ?? 0) + 1);
   sub.subscribe();
   return () => {
+    sub.off('publication', handler);
+    const rest = (listeners.get(channel) ?? 1) - 1;
+    if (rest > 0) {
+      listeners.set(channel, rest);
+      return;
+    }
+    listeners.delete(channel);
     sub.unsubscribe();
     client?.removeSubscription(sub);
   };

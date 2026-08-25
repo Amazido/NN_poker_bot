@@ -79,6 +79,9 @@ export type AvailableActions =
   | { type: 'play'; cards: CardCode[] };
 
 export interface PrivateView {
+  /** Личный канал один на все комнаты, поэтому приватку сверяем с открытой
+   * комнатой: недоигранный матч иначе перебивает руку в текущем. */
+  room_id: string;
   seat: number;
   hand: CardCode[];
   your_turn: boolean;
