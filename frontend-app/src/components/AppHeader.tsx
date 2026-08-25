@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { RoundPublic } from '../types/game';
-import { suitInner } from '../lib/cards';
+import { jokerInner, parseCard, rankDisplay, suitInner, type Suit } from '../lib/cards';
 import styles from './AppHeader.module.css';
 
 export function AppHeader({
@@ -47,13 +47,27 @@ export function Pill({ children, trump }: { children: ReactNode; trump?: boolean
   return <span className={[styles.pill, trump ? styles.pillTrump : ''].filter(Boolean).join(' ')}>{children}</span>;
 }
 
+function suitColor(suit: Suit | undefined, jokerRed?: boolean): string {
+  if (jokerRed === true || suit === 'D' || suit === 'H') return 'var(--card-red)';
+  return 'var(--card-ink)';
+}
+
 export function TrumpPill({ round }: { round: RoundPublic }) {
-  if (round.no_trump) return <Pill trump>Без козыря</Pill>;
-  const color = round.trump_suit === 'D' || round.trump_suit === 'H' ? 'var(--card-red)' : 'currentColor';
+  const parsed = parseCard(round.trump_card);
+  const color = parsed.joker ? suitColor(undefined, parsed.color === 'red') : suitColor(parsed.suit);
+  const glyph = parsed.joker ? jokerInner(color) : suitInner(parsed.suit!, color);
+
   return (
     <Pill trump>
-      <svg viewBox="0 0 100 100" dangerouslySetInnerHTML={{ __html: suitInner(round.trump_suit as 'C' | 'D' | 'H' | 'S', color) }} />
-      Козырь
+      <span className={styles.trumpFace}>
+        {!parsed.joker && parsed.rank && (
+          <span className={styles.trumpRank} style={{ color }}>
+            {rankDisplay(parsed.rank)}
+          </span>
+        )}
+        <svg viewBox="0 0 100 100" dangerouslySetInnerHTML={{ __html: glyph }} />
+      </span>
+      {round.no_trump ? 'Без козыря' : 'Козырь'}
     </Pill>
   );
 }

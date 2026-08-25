@@ -22,7 +22,6 @@ export function PlayingScreen({ view, onPlay, onLeave, lastRoundScore, roomCode 
   const me = view.me!;
   const turnName = view.seats.find((s) => s.seat === r.current_trick?.turn)?.username ?? '';
   const legal = me.your_turn && me.available_actions?.type === 'play' ? new Set(me.available_actions.cards) : null;
-  const myDelta = lastRoundScore?.result[me.seat]?.delta;
   const scoreboard = useScoreboard();
 
   function handleLeave() {
@@ -58,7 +57,7 @@ export function PlayingScreen({ view, onPlay, onLeave, lastRoundScore, roomCode 
               </WaitingTurnNote>
             )}
           </div>
-          <Hand cards={sortHand(me.hand, r.trump_suit)} legal={legal} onPlay={onPlay} scoreDelta={myDelta} />
+          <Hand cards={sortHand(me.hand, r.trump_suit)} legal={legal} onPlay={onPlay} />
         </>
       }
       />

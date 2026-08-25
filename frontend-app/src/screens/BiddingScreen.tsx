@@ -21,7 +21,6 @@ export function BiddingScreen({ view, onBid, onLeave, lastRoundScore, roomCode }
   const r = view.round!;
   const me = view.me!;
   const bidderName = view.seats.find((s) => s.seat === r.bid_turn)?.username ?? '';
-  const myDelta = lastRoundScore?.result[me.seat]?.delta;
   const scoreboard = useScoreboard();
 
   function handleLeave() {
@@ -57,7 +56,7 @@ export function BiddingScreen({ view, onBid, onLeave, lastRoundScore, roomCode }
               </WaitingTurnNote>
             )}
           </div>
-          <Hand cards={sortHand(me.hand, r.trump_suit)} scoreDelta={myDelta} />
+          <Hand cards={sortHand(me.hand, r.trump_suit)} />
         </>
       }
       />

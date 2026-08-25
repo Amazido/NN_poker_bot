@@ -77,10 +77,12 @@ function SelfSeat({
   view,
   point,
   mode,
+  scoreDelta,
 }: {
   view: GameView;
   point: { x: number; y: number };
   mode: 'bidding' | 'playing';
+  scoreDelta: number | null;
 }) {
   const r = view.round!;
   const me = view.me!;
@@ -94,6 +96,11 @@ function SelfSeat({
         {isDealer && (
           <span className={styles.dealerChip} title="Сдаёшь">
             Д
+          </span>
+        )}
+        {scoreDelta !== null && (
+          <span className={`${styles.scorePop} ${styles.scorePopBeside} ${scoreDelta >= 0 ? styles.scorePopGood : styles.scorePopBad}`}>
+            {scoreDelta >= 0 ? `+${scoreDelta}` : scoreDelta}
           </span>
         )}
       </div>
@@ -187,7 +194,7 @@ export function GameTable({
           scoreDelta={lastRoundScore?.result[seat.seat]?.delta ?? null}
         />
       ))}
-      <SelfSeat view={view} point={points[meSeat]} mode={mode} />
+      <SelfSeat view={view} point={points[meSeat]} mode={mode} scoreDelta={lastRoundScore?.result[meSeat]?.delta ?? null} />
       <CenterZone view={view} mode={mode} />
     </div>
   );

@@ -182,6 +182,12 @@
   background: var(--bad);
   color: #fff;
 }
+.scorePopBeside {
+  left: calc(100% + 6px);
+  top: 50%;
+  transform: translateY(-50%);
+  animation: scorePopBesideIn 0.25s ease-out;
+}
 @keyframes scorePopIn {
   from {
     opacity: 0;
@@ -190,6 +196,16 @@
   to {
     opacity: 1;
     transform: translate(-50%, -100%);
+  }
+}
+@keyframes scorePopBesideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%);
   }
 }
 .oppName {
