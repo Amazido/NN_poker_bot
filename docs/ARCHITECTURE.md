@@ -13,6 +13,7 @@
 ## Стек
 
 - **Backend**: Python 3.11, FastAPI, SQLAlchemy 2 (async), Alembic.
+- **Frontend**: React 19 + TypeScript, сборка Vite, realtime через `centrifuge-js`.
 - **БД**: PostgreSQL (JSONB для конфигов правил, снапшотов раздач, журнала).
 - **Live-стейт**: Redis — источник истины для розыгрыша (руки, ход, доступные действия).
 - **Realtime**: Centrifugo (server API publish + JWT для подключения клиентов).
@@ -82,6 +83,11 @@ Live-стейт (полное состояние, включая руки) хр�
   - `start` → `{"type":"state",...}` в комнату + `{"type":"private",...}` каждому;
   - `action` → `{"type":"events",...}` (лента) + `{"type":"state",...}` в комнату
     и приватные руки игрокам.
+- **Изоляция комнат в личном канале.** Канал `user#{id}` один на человека и живёт
+  дольше отдельной комнаты, поэтому приватный вид всегда несёт `room_id`, а клиент
+  отбрасывает приватку с чужим `room_id`. Приватка не уходит на места из
+  `left_seats` (ушедшие и боты). Без этого недоигранный матч перебивал руку
+  в открытой комнате (см. журнал 2026-08-25).
 - **Токен подключения**: `GET /auth/centrifugo-token` (JWT `sub = user_id`, HMAC).
 - **Транспорт наружу**: браузер → `wss://odessky.win/connection/websocket` →
   Cloudflare → origin nginx (`location /connection/`) → контейнер Centrifugo
@@ -92,18 +98,43 @@ Live-стейт (полное состояние, включая руки) хр�
   (`CENTRIFUGO_API_KEY`, `CENTRIFUGO_TOKEN_SECRET`) — в файле их нет. App и Centrifugo
   используют одни и те же значения из серверного `.env`.
 - **Проверка**: детерминированно — pytest (`test_realtime_publishes_on_transitions`,
-  перехват публикаций); вживую — `backend/scripts/ws_smoke.py` (подписка по WS +
-  публикация через API, проверка доставки).
-- **Фронт на WS** (`centrifuge-js`) пока не подключён — клиент обновляется REST-поллингом
-  (следующая итерация).
+  `tests/test_leave_and_channels.py` — перехват публикаций); вживую —
+  `backend/scripts/ws_smoke.py` (доставка push) и `backend/scripts/repro_cross_room.py`
+  (изоляция личного канала при переходе между комнатами).
 
 ## API (кратко)
 
 - `POST /auth/telegram`, `POST /auth/dev` (DEBUG), `GET /auth/me`, `POST /auth/logout`,
   `GET /auth/centrifugo-token`.
 - `POST /rooms` (создать), `POST /rooms/join`, `POST /rooms/{id}/start`,
-  `POST /rooms/{id}/action` (`bid` / `play_card`), `GET /rooms/{id}` (публичный стейт),
-  `GET /rooms/{id}/hand` (моя рука + доступные действия).
+  `POST /rooms/{id}/bots` (хост добавляет бота в лобби),
+  `POST /rooms/{id}/leave` (выйти), `POST /rooms/{id}/action` (`bid` / `play_card`),
+  `GET /rooms/{id}` (публичный стейт), `GET /rooms/{id}/hand` (моя рука + действия).
+
+## Фронт (`frontend-app`)
+
+- Экран выбирается по состоянию: `screen-resolver.ts` (лобби → ожидание, фаза
+  раздачи → торги/розыгрыш, конец → итоги). Стол не рисуется, пока приватный вид
+  не сойдётся с публичным по `round_index` и `phase` — иначе можно показать новую
+  раздачу со старой рукой.
+- Данные — `api/useGameView.ts`: начальный снимок по REST, дальше push'и из двух
+  каналов (комната + личный). Поверх этого: редкий страховочный REST-опрос при живом
+  WS, полноценный поллинг, если WS не поднялся, и пересборка пары public+private,
+  если рассинхрон затянулся дольше пары секунд.
+- `?mock=1` — дев-стенд экранов на фикстурах, без бэка (`DevHarness.tsx`).
+- Дизайн экранов: `docs/superpowers/specs/2026-08-09-frontend-mockups-design.md`.
+
+## Выход из комнаты и авто-ход
+
+- В **лобби** выход освобождает место, остальные сдвигаются (движок ждёт места
+  `0..N-1` подряд).
+- В **идущем матче** место остаётся за игроком (движок завязан на фиксированное
+  `n_players`), но попадает в `left_seats`: за него доигрывает авто-ход, причём
+  почти сразу (`LEFT_SEAT_TIMEOUT_SEC`), а не через полный `turn_timeout_sec`.
+  Боты добавляются в `left_seats` при старте — играют тем же механизмом.
+- Если живых игроков за столом не осталось (все ушли, остались боты), матч
+  **закрывается**: `match_over`, статус `finished`, комната снимается с авто-хода.
+  Иначе фоновый таймер прокручивал бы все оставшиеся раздачи в пустоту.
 
 ## Таймер хода
 
@@ -125,6 +156,10 @@ Live-стейт (полное состояние, включая руки) хр�
   прогоняет полный матч на короткой редакции правил (см. `tests/conftest.py`).
 - Живой realtime-смоук: `python scripts/ws_smoke.py` (по умолчанию против dev
   Centrifugo `localhost:8001`).
+- Изоляция комнат вживую: `python scripts/repro_cross_room.py` — игрок уходит из
+  матча и садится в новую комнату; в его личный канал не должно приходить ничего
+  из покинутой. По умолчанию бьёт по стенду, переопределяется через `BASE`/`WS`.
+- Фронт: `npm run build` (в `frontend-app`) — типы + сборка, `npm run lint`.
 
 Prod-стек (`docker-compose.yml`) монтирует `backend/centrifugo.prod.json` и
 публикует Centrifugo только на `127.0.0.1:8001` (наружу — через nginx).

@@ -30,11 +30,33 @@ uvicorn app.main:app --reload
 
 Swagger: http://localhost:8000/docs
 
+## Фронт (`frontend-app`)
+
+React + TypeScript, сборка Vite; realtime через `centrifuge-js`.
+
+```bash
+cd frontend-app
+npm install
+npm run dev          # адреса API/WS — в .env.development
+npm run build        # типы + прод-сборка в dist/
+```
+
+Дев-стенд экранов на фикстурах, без бэка и авторизации: `?mock=1`.
+
 ## Тесты
 
 ```bash
 cd backend
 pytest
+
+# Живые проверки против стенда
+python scripts/stand_check.py        # публичный путь: HTTPS + WSS + push
+python scripts/repro_cross_room.py   # личный канал не смешивает комнаты
+```
+
+```bash
+cd frontend-app
+npm run build && npm run lint
 ```
 
 ## Прод (Docker Compose)
