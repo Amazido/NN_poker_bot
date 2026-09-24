@@ -77,11 +77,11 @@ export default function App() {
     setRoomCode(null);
   }
 
-  async function handleCreate() {
+  async function handleCreate(rulesCode?: string) {
     setBusy(true);
     setEntryError(null);
     try {
-      enterRoom(await createRoom());
+      enterRoom(await createRoom(rulesCode));
     } catch (e) {
       setEntryError(actionErrorMessage(e));
     } finally {

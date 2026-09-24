@@ -1,7 +1,19 @@
-import { buildDeck, legalMoves } from './cards';
+﻿import { buildDeck, legalMoves } from './cards';
 import type { CardCode, GameView, Seat } from '../types/game';
 
 const ODESSA_NAMES = ['Аркадий', 'Софа', 'Моня', 'Циля', 'Жора', 'Бэла'];
+
+const FIXTURE_RULES = {
+  code: 'odessa_circular',
+  name: 'Круговое старшинство',
+  summary: [
+    'Раздачи от 1 до 10 карт',
+    'Игроков 3–5',
+    'Двойка бьёт туза своей масти',
+    'Некозырной джокер бьёт козырного',
+    'Очки: +10 за взятку при точном заказе, -5 за перебор, -10 за недобранную',
+  ],
+};
 
 function shuffled(arr: CardCode[], seed: number): CardCode[] {
   const a = arr.slice();
@@ -48,6 +60,7 @@ export function makeFixture(screenType: FixtureScreen, n: number): GameView {
       n_players: joined,
       max_players: n,
       round_index: 0,
+      rules: FIXTURE_RULES,
       round: null,
       turn: { kind: null, seat: null },
       left_seats: [],
@@ -77,6 +90,7 @@ export function makeFixture(screenType: FixtureScreen, n: number): GameView {
       n_players: n,
       round_index: 3,
       rounds_total: 18 + n,
+      rules: FIXTURE_RULES,
       round: {
         cards_count: cardsCount,
         dealer_seat: dealerSeat,
@@ -138,6 +152,7 @@ export function makeFixture(screenType: FixtureScreen, n: number): GameView {
     n_players: n,
     round_index: 3,
     rounds_total: 18 + n,
+    rules: FIXTURE_RULES,
     round: {
       cards_count: cardsCount,
       dealer_seat: dealerSeat,

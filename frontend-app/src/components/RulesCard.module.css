@@ -1,0 +1,31 @@
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: var(--shadow-sm);
+}
+.cardCompact {
+  composes: card;
+  background: var(--surface-2);
+  box-shadow: none;
+  margin-top: 12px;
+  padding: 10px 12px;
+}
+.title {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.list {
+  margin: 0;
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.item {
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--muted);
+}

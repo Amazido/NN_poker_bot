@@ -1,5 +1,6 @@
 import { AppHeader } from '../components/AppHeader';
 import { LobbySeats } from '../components/LobbySeats';
+import { RulesCard } from '../components/RulesCard';
 import type { GameView } from '../types/game';
 import styles from './WaitingScreen.module.css';
 
@@ -33,6 +34,7 @@ export function WaitingScreen({ view, myUserId, onStart, onLeave, onAddBot, star
           <button className={styles.shareBtn}>Поделиться</button>
         </div>
         <LobbySeats seats={view.seats} maxPlayers={maxPlayers} meSeat={meSeat} />
+        <RulesCard rules={view.rules} />
         <div className={styles.hostPanel}>
           {isHost ? (
             <>

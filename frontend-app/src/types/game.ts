@@ -50,6 +50,26 @@ export interface RoundPublic {
   hand_counts: Record<string, number>; // чужие руки — только количество карт
 }
 
+/** Правила стола. Редакций несколько, игрок должен видеть, во что сел играть. */
+export interface RulesView {
+  code: string;
+  name: string;
+  /** Отличия редакции короткими фразами — готовы к показу как есть. */
+  summary: string[];
+}
+
+/** Элемент каталога редакций (GET /rules/editions) — для выбора при создании стола. */
+export interface RulesEditionOption {
+  code: string;
+  version: number;
+  name: string;
+  description: string;
+  min_players: number;
+  max_players: number;
+  rounds_total_hint: number;
+  summary: string[];
+}
+
 export interface PublicView {
   room_id: string;
   status: 'lobby' | 'playing' | 'finished';
@@ -61,6 +81,7 @@ export interface PublicView {
   round_index: number;
   rounds_total?: number;
   round: RoundPublic | null;
+  rules?: RulesView;
   turn: { kind: 'bid' | 'play' | null; seat: number | null };
   /** Места, чей игрок вышел посреди матча — за них доигрывает авто-ход. */
   left_seats: number[];

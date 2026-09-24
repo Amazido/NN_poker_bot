@@ -60,7 +60,7 @@ export function BiddingScreen({ view, onBid, onLeave, lastRoundScore, roomCode }
         </>
       }
       />
-      {scoreboard.open && <ScoreboardModal seats={view.seats} onClose={scoreboard.hide} />}
+      {scoreboard.open && <ScoreboardModal seats={view.seats} rules={view.rules} onClose={scoreboard.hide} />}
     </>
   );
 }

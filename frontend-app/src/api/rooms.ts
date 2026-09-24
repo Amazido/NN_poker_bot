@@ -1,8 +1,16 @@
 import { apiFetch } from './http';
-import type { CardCode, PrivateView, PublicView } from '../types/game';
+import type { CardCode, PrivateView, PublicView, RulesEditionOption } from '../types/game';
 
-export function createRoom(): Promise<PublicView> {
-  return apiFetch<PublicView>('/rooms', { method: 'POST', body: {} });
+/** rulesCode не задан — бэк возьмёт редакцию по умолчанию. */
+export function createRoom(rulesCode?: string): Promise<PublicView> {
+  return apiFetch<PublicView>('/rooms', {
+    method: 'POST',
+    body: rulesCode ? { rules_code: rulesCode } : {},
+  });
+}
+
+export function getRulesEditions(): Promise<RulesEditionOption[]> {
+  return apiFetch<RulesEditionOption[]>('/rules/editions');
 }
 
 export function joinRoom(joinCode: string): Promise<PublicView> {

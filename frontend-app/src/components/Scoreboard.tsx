@@ -1,8 +1,17 @@
 import { useState } from 'react';
-import type { Seat } from '../types/game';
+import type { RulesView, Seat } from '../types/game';
+import { RulesCard } from './RulesCard';
 import styles from './Scoreboard.module.css';
 
-function ScoreboardModal({ seats, onClose }: { seats: Seat[]; onClose: () => void }) {
+function ScoreboardModal({
+  seats,
+  rules,
+  onClose,
+}: {
+  seats: Seat[];
+  rules?: RulesView;
+  onClose: () => void;
+}) {
   const sorted = [...seats].sort((a, b) => b.score - a.score);
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -15,6 +24,7 @@ function ScoreboardModal({ seats, onClose }: { seats: Seat[]; onClose: () => voi
             <span className={styles.score}>{s.score}</span>
           </div>
         ))}
+        <RulesCard rules={rules} compact />
         <button className={styles.closeBtn} onClick={onClose}>
           Закрыть
         </button>
