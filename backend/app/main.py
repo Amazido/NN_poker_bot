@@ -11,9 +11,8 @@ from app.auth.router import router as auth_router
 from app.config import CORS_ORIGINS
 from app.core.exceptions import NotAuthenticated
 from app.logger import startup_log, task_log
-from app.poker import cards as C
-from app.poker import engine
 from app.poker import state as state_store
+from app.poker.autoplay import choose_auto_action
 from app.poker.router import router as poker_router
 from app.poker.rules import RulesEdition
 from app.poker.rules_router import router as rules_router
@@ -48,25 +47,6 @@ async def ensure_builtin_rules() -> None:
             startup_log.info("Seeded rules edition {} v{}", spec["code"], spec["version"])
 
 
-def _auto_action(state: dict):
-    """Выбрать действие по умолчанию при истечении таймера хода."""
-    kind, seat = engine.current_turn(state)
-    if kind is None:
-        return None, None, None
-    r = state["round"]
-    rules = RulesEdition(state["rules"])
-    if kind == "bid":
-        n = state["n_players"]
-        others_sum = sum(r["bids"].values())
-        is_last = len(r["bids"]) == n - 1
-        allowed = rules.allowed_bids(r["cards_count"], is_last, others_sum)
-        bid = 0 if 0 in allowed else allowed[0]
-        return seat, "bid", {"bid": bid}
-    hand = r["hands"][str(seat)]
-    legal = C.legal_moves(hand, r["current_trick"]["lead_suit"], r["trump_suit"])
-    return seat, "play_card", {"card": legal[0]}
-
-
 async def turn_timeout_task() -> None:
     """Фоновый таймер: авто-ход за игрока, который не успел походить."""
     from app.db.base import async_session_maker
@@ -94,7 +74,7 @@ async def turn_timeout_task() -> None:
                 if datetime.now(timezone.utc) < datetime.fromisoformat(deadline):
                     continue
 
-                seat, action_type, payload = _auto_action(state)
+                seat, action_type, payload = choose_auto_action(state)
                 if seat is None:
                     continue
                 user_id = next(
