@@ -6,6 +6,7 @@ import { createRoom, joinRoom, startMatch, bid, openHand, playCard, leaveRoomApi
 import { useGameView } from './api/useGameView';
 import { getTelegramWebApp, getStartParam } from './api/telegram';
 import { resolveScreen } from './screen-resolver';
+import type { TableRulesSettings } from './types/game';
 import { EntryScreen } from './screens/EntryScreen';
 import { WaitingScreen } from './screens/WaitingScreen';
 import { BiddingScreen } from './screens/BiddingScreen';
@@ -77,11 +78,11 @@ export default function App() {
     setRoomCode(null);
   }
 
-  async function handleCreate(rulesCode?: string) {
+  async function handleCreate(opts: { rulesCode?: string; rules?: TableRulesSettings }) {
     setBusy(true);
     setEntryError(null);
     try {
-      enterRoom(await createRoom(rulesCode));
+      enterRoom(await createRoom(opts));
     } catch (e) {
       setEntryError(actionErrorMessage(e));
     } finally {

@@ -1,16 +1,30 @@
 import { apiFetch } from './http';
-import type { CardCode, PrivateView, PublicView, RulesEditionOption } from '../types/game';
+import type {
+  CardCode,
+  PrivateView,
+  PublicView,
+  RulesEditionOption,
+  RulesPresetsResponse,
+  TableRulesSettings,
+} from '../types/game';
 
-/** rulesCode не задан — бэк возьмёт редакцию по умолчанию. */
-export function createRoom(rulesCode?: string): Promise<PublicView> {
-  return apiFetch<PublicView>('/rooms', {
-    method: 'POST',
-    body: rulesCode ? { rules_code: rulesCode } : {},
-  });
+/** Стол играет либо по редакции из каталога, либо по своим правилам.
+ *
+ * Не задано ничего — бэк возьмёт редакцию по умолчанию. */
+export function createRoom(opts: { rulesCode?: string; rules?: TableRulesSettings } = {}): Promise<PublicView> {
+  const body: Record<string, unknown> = {};
+  if (opts.rules) body.rules = opts.rules;
+  else if (opts.rulesCode) body.rules_code = opts.rulesCode;
+  return apiFetch<PublicView>('/rooms', { method: 'POST', body });
 }
 
 export function getRulesEditions(): Promise<RulesEditionOption[]> {
   return apiFetch<RulesEditionOption[]>('/rules/editions');
+}
+
+/** Заготовки и границы для формы создания стола. */
+export function getRulesPresets(): Promise<RulesPresetsResponse> {
+  return apiFetch<RulesPresetsResponse>('/rules/presets');
 }
 
 export function joinRoom(joinCode: string): Promise<PublicView> {

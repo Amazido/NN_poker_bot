@@ -14,12 +14,19 @@ class RoomRepository:
         self.session = session
 
     async def create(
-        self, *, join_code: str, rules_edition_id: uuid.UUID, max_players: int, created_by: uuid.UUID
+        self,
+        *,
+        join_code: str,
+        rules_edition_id: Optional[uuid.UUID],
+        rules_config: Optional[dict],
+        max_players: int,
+        created_by: uuid.UUID,
     ) -> GameRoomModel:
         room = GameRoomModel(
             id=uuid.uuid4(),
             join_code=join_code,
             rules_edition_id=rules_edition_id,
+            rules_config=rules_config,
             max_players=max_players,
             created_by=created_by,
         )

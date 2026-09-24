@@ -31,6 +31,12 @@ def _gen_join_code(length: int = 6) -> str:
     return "".join(random.choices(alphabet, k=length))
 
 
+# Чем подписан стол, собранный хозяином вручную: редакции у него нет, но
+# показать игроку, во что он садится играть, всё равно надо.
+CUSTOM_RULES_CODE = "custom"
+CUSTOM_RULES_NAME = "Свои правила"
+
+
 class PokerService:
     def __init__(
         self,
@@ -64,22 +70,51 @@ class PokerService:
 
     # === Комната ===
 
-    async def create_room(
-        self, user: UserModel, rules_code: Optional[str] = None, max_players: Optional[int] = None
-    ) -> dict:
-        edition = (
-            await self.rules_repo.get_active_by_code(rules_code)
-            if rules_code
-            else await self.rules_repo.get_default()
-        )
-        if not edition:
-            raise Conflict("No active rules edition found (seed one first)")
+    async def _table_rules(self, room: GameRoomModel):
+        """Правила стола: собственный конфиг хозяина либо редакция из каталога.
 
-        # Негодную редакцию ловим здесь, а не в середине матча на большой раздаче.
+        Возвращает (config, meta) — meta идёт игрокам, чтобы подписать стол.
+        """
+        if room.rules_config is not None:
+            return room.rules_config, {"code": CUSTOM_RULES_CODE, "name": CUSTOM_RULES_NAME}
+        if not room.rules_edition_id:
+            return None, {}
+        edition = await self.rules_repo.get(str(room.rules_edition_id))
+        if not edition:
+            return None, {}
+        return edition.config, {"code": edition.code, "name": edition.name}
+
+    async def create_room(
+        self,
+        user: UserModel,
+        rules_code: Optional[str] = None,
+        rules_config: Optional[dict] = None,
+        max_players: Optional[int] = None,
+    ) -> dict:
+        """Создать стол — по редакции из каталога либо по своим правилам.
+
+        `rules_config` приходит с формы создания стола и уже собран в конфиг
+        (`rules.config_from_settings`). Редакция и свой конфиг взаимно
+        исключают друг друга: у стола либо каталожные правила, либо собственные.
+        """
+        edition = None
+        if rules_config is None:
+            edition = (
+                await self.rules_repo.get_active_by_code(rules_code)
+                if rules_code
+                else await self.rules_repo.get_default()
+            )
+            if not edition:
+                raise Conflict("No active rules edition found (seed one first)")
+
+        config = rules_config if rules_config is not None else edition.config
+        whose = "Свои правила стола" if rules_config is not None else f"Редакция правил {edition.code}"
+
+        # Негодные правила ловим здесь, а не в середине матча на большой раздаче.
         try:
-            rules = RulesEdition(edition.config, validate=True)
+            rules = RulesEdition(config, validate=True)
         except RulesConfigError as e:
-            raise Conflict(f"Редакция правил {edition.code} непригодна: {e}") from e
+            raise Conflict(f"{whose}: {e}") from e
 
         mp = max_players or rules.max_players
         mp = max(rules.min_players, min(mp, rules.max_players))
@@ -94,12 +129,16 @@ class PokerService:
 
         room = await self.room_repo.create(
             join_code=code,
-            rules_edition_id=edition.id,
+            rules_edition_id=edition.id if edition else None,
+            rules_config=rules_config,
             max_players=mp,
             created_by=user.id,
         )
         await self.room_repo.add_player(room_id=room.id, user_id=user.id, seat_index=0)
-        poker_log.info("Room {} created by {} (rules {})", room.join_code, user.id, edition.code)
+        poker_log.info(
+            "Room {} created by {} (rules {})",
+            room.join_code, user.id, edition.code if edition else CUSTOM_RULES_CODE,
+        )
         pub = await self.get_public(str(room.id))
         await channels.publish_lobby(pub)
         return pub
@@ -227,8 +266,8 @@ class PokerService:
             raise Conflict("Match already started")
 
         players = await self.room_repo.get_players(room.id)
-        edition = await self.rules_repo.get(str(room.rules_edition_id))
-        rules = RulesEdition(edition.config if edition else None)
+        config, rules_meta = await self._table_rules(room)
+        rules = RulesEdition(config)
         n = len(players)
         if n < rules.min_players:
             raise Conflict(f"Need at least {rules.min_players} players (have {n})")
@@ -260,9 +299,9 @@ class PokerService:
         state = engine.new_game_state(
             room_id=str(room.id),
             seats=seats,
-            rules_config=edition.config if edition else None,
+            rules_config=config,
             starting_dealer=starting_dealer,
-            rules_meta={"code": edition.code, "name": edition.name} if edition else None,
+            rules_meta=rules_meta,
         )
         if bot_seats:
             state["left_seats"] = bot_seats
@@ -375,14 +414,14 @@ class PokerService:
                 "score": p.score,
                 "is_bot": bool(u and u.user_type == UserType.BOT),
             })
-        edition = await self.rules_repo.get(str(room.rules_edition_id))
+        config, rules_meta = await self._table_rules(room)
         return {
             "room_id": str(room.id),
             "join_code": room.join_code,
             "rules": state_store.rules_view(
-                edition.config if edition else None,
-                code=edition.code if edition else "",
-                name=edition.name if edition else "",
+                config,
+                code=rules_meta.get("code", ""),
+                name=rules_meta.get("name", ""),
             ),
             "status": room.status,
             "match_over": room.status == RoomStatus.FINISHED,

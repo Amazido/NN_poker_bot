@@ -1,12 +1,17 @@
 import { useMemo, useState } from 'react';
 import styles from './App.module.css';
-import { makeFixture, type FixtureScreen } from './lib/fixtures';
+import { FIXTURE_PRESETS, makeFixture, type FixtureScreen } from './lib/fixtures';
 import { resolveScreen } from './screen-resolver';
+import { EntryScreen } from './screens/EntryScreen';
 import { WaitingScreen } from './screens/WaitingScreen';
 import { BiddingScreen } from './screens/BiddingScreen';
 import { PlayingScreen } from './screens/PlayingScreen';
 
-const SCREENS: { id: FixtureScreen; label: string }[] = [
+/** Экран входа живёт до комнаты, поэтому GameView для него нет. */
+type HarnessScreen = FixtureScreen | 'entry';
+
+const SCREENS: { id: HarnessScreen; label: string }[] = [
+  { id: 'entry', label: 'Вход' },
   { id: 'waiting', label: 'Ожидание' },
   { id: 'bidding', label: 'Торги' },
   { id: 'bidding-blind', label: 'Торги втёмную' },
@@ -33,11 +38,11 @@ function Segmented<T extends string | number>({ items, active, onPick }: { items
 }
 
 export default function App() {
-  const [screen, setScreen] = useState<FixtureScreen>('waiting');
+  const [screen, setScreen] = useState<HarnessScreen>('entry');
   const [players, setPlayers] = useState(4);
   const [theme, setTheme] = useState<ThemeId>('auto');
 
-  const view = useMemo(() => makeFixture(screen, players), [screen, players]);
+  const view = useMemo(() => makeFixture(screen === 'entry' ? 'waiting' : screen, players), [screen, players]);
   const resolved = resolveScreen(view);
 
   if (theme === 'auto') document.documentElement.removeAttribute('data-theme');
@@ -66,7 +71,14 @@ export default function App() {
 
       <div className={styles.stage}>
         <div className={styles.column}>
-          {resolved.type === 'waiting' && (
+          {screen === 'entry' && (
+            <EntryScreen
+              presets={FIXTURE_PRESETS}
+              onCreate={(opts) => console.log('create', opts)}
+              onJoin={(c) => console.log('join', c)}
+            />
+          )}
+          {screen !== 'entry' && resolved.type === 'waiting' && (
             <WaitingScreen
               view={resolved.view}
               myUserId={resolved.view.seats[0]?.user_id ?? ''}
@@ -75,11 +87,15 @@ export default function App() {
               onAddBot={() => console.log('add bot')}
             />
           )}
-          {resolved.type === 'bidding' && (
+          {screen !== 'entry' && resolved.type === 'bidding' && (
             <BiddingScreen view={resolved.view} onBid={(n) => console.log('bid', n)} onOpenHand={() => console.log('open hand')} />
           )}
-          {resolved.type === 'playing' && <PlayingScreen view={resolved.view} onPlay={(c) => console.log('play', c)} />}
-          {resolved.type === 'unsupported' && <p>Экран для этой фазы ещё не спроектирован (sub-project C).</p>}
+          {screen !== 'entry' && resolved.type === 'playing' && (
+            <PlayingScreen view={resolved.view} onPlay={(c) => console.log('play', c)} />
+          )}
+          {screen !== 'entry' && resolved.type === 'unsupported' && (
+            <p>Экран для этой фазы ещё не спроектирован (sub-project C).</p>
+          )}
         </div>
       </div>
 

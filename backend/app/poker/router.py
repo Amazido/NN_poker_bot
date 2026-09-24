@@ -12,12 +12,17 @@ from app.auth.dependencies import get_current_user
 from app.core.exceptions import Conflict, InvalidMove, NotFound
 from app.db.models import UserModel
 from app.dependencies import get_poker_service
+from app.poker.rules import config_from_settings
+from app.poker.schemas import TableRulesSettings
 
 router = APIRouter(prefix="/rooms", tags=["poker"])
 
 
 class CreateRoomRequest(BaseModel):
     rules_code: Optional[str] = Field(default=None, description="Код редакции правил (по умолчанию активная)")
+    rules: Optional[TableRulesSettings] = Field(
+        default=None, description="Свои правила стола; заданы — редакция игнорируется"
+    )
     max_players: Optional[int] = Field(default=None, description="Максимум игроков за столом")
 
 
@@ -44,8 +49,14 @@ async def create_room(
     user: UserModel = Depends(get_current_user),
     service=Depends(get_poker_service),
 ):
+    config = config_from_settings(request.rules.model_dump()) if request.rules else None
     try:
-        return await service.create_room(user, rules_code=request.rules_code, max_players=request.max_players)
+        return await service.create_room(
+            user,
+            rules_code=request.rules_code,
+            rules_config=config,
+            max_players=request.max_players,
+        )
     except (NotFound, Conflict, InvalidMove) as e:
         raise _handle(e) from e
 

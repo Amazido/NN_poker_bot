@@ -64,6 +64,45 @@ export interface RulesView {
   blind_bonus: number;
 }
 
+/** Правила стола в виде полей формы создания (см. POST /rooms и GET /rules/presets).
+ *
+ * Штрафы здесь положительные («штраф 5») — знак ставит сервер. */
+export interface TableRulesSettings {
+  rounds_start: number;
+  rounds_peak: number;
+  two_beats_ace: boolean;
+  offcolor_beats_oncolor: boolean;
+  blind_allowed: boolean;
+  blind_bonus: number;
+  infinite_deck: boolean;
+  pass_reward: number;
+  trick_reward: number;
+  overtrick_penalty: number;
+  undertrick_penalty: number;
+}
+
+/** Заготовка формы: нажал — поля заполнились. */
+export interface RulesPreset {
+  code: string;
+  name: string;
+  description: string;
+  settings: TableRulesSettings;
+}
+
+/** Границы полей формы. Считает бэк: они зависят от размера колоды. */
+export interface RulesFormLimits {
+  min_start: number;
+  max_peak_one_deck: number;
+  max_peak_infinite: number;
+}
+
+export interface RulesPresetsResponse {
+  /** Эталон сезона — им форма заполняется по умолчанию. */
+  season: RulesPreset | null;
+  presets: RulesPreset[];
+  limits: RulesFormLimits;
+}
+
 /** Элемент каталога редакций (GET /rules/editions) — для выбора при создании стола. */
 export interface RulesEditionOption {
   code: string;

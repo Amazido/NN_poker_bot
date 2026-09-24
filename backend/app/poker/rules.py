@@ -316,3 +316,101 @@ class RulesEdition:
             f"{s['over']} за перебор, {s['under_per_trick']} за недобранную"
         )
         return out
+
+
+# === Настройки стола ===
+#
+# Плоский набор полей, которыми игрок собирает правила при создании стола, —
+# проекция конфига на форму, а не вторая модель правил. Отличий от конфига два,
+# оба ради удобства ввода:
+#   * штрафы задаются положительным числом («штраф 5»), в конфиге они со знаком;
+#   * то, чего форма не спрашивает (джокеры, число игроков, «крюк», таймаут),
+#     берётся из дефолтов.
+#
+# Имена полей общие для API и фронта — это и есть контракт формы.
+
+TABLE_SETTINGS_FIELDS = (
+    "rounds_start",
+    "rounds_peak",
+    "two_beats_ace",
+    "offcolor_beats_oncolor",
+    "blind_allowed",
+    "blind_bonus",
+    "infinite_deck",
+    "pass_reward",
+    "trick_reward",
+    "overtrick_penalty",
+    "undertrick_penalty",
+)
+
+# Потолок раздачи для формы. При безлимитной колоде он упирается не в колоду,
+# а в читаемость стола: 20 карт на руке уже плохо помещаются в раскладку.
+MAX_PEAK_INFINITE = 20
+
+
+def max_peak_finite() -> int:
+    """Сколько карт влезает в руку при одной колоде и полном столе."""
+    rules = RulesEdition()
+    return rules.max_cards_per_hand(rules.max_players)
+
+
+def config_from_settings(settings: Dict[str, Any]) -> Dict[str, Any]:
+    """Собрать конфиг редакции из полей формы создания стола."""
+    blind = bool(settings["blind_allowed"])
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "deck": {"jokers": 2, "infinite": bool(settings["infinite_deck"])},
+        "rounds": {
+            "mode": "up_plateau_down",
+            "start": int(settings["rounds_start"]),
+            "peak": int(settings["rounds_peak"]),
+            "sequence": None,
+        },
+        "ranking": {
+            "two_beats_ace_same_suit": bool(settings["two_beats_ace"]),
+            "offcolor_beats_oncolor": bool(settings["offcolor_beats_oncolor"]),
+            "duplicate_first_wins": True,
+        },
+        "bidding": {"hook": True, "blind_allowed": blind},
+        "scoring": {
+            "exact_per_trick": int(settings["trick_reward"]),
+            "exact_zero_bonus": int(settings["pass_reward"]),
+            # Игрок вводит штраф как «сколько снимут», знак ставим сами.
+            "over": -abs(int(settings["overtrick_penalty"])),
+            "under_per_trick": -abs(int(settings["undertrick_penalty"])),
+            "blind_bonus": int(settings["blind_bonus"]) if blind else 0,
+        },
+    }
+
+
+def settings_from_config(config: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """Разобрать конфиг обратно в поля формы — или None, если он ей не выражается.
+
+    Форма умеет не всё: только режим `up_plateau_down`, два джокера, посадку
+    3–5, включённый «крюк». Редакцию, которая в эти рамки не влезает, нельзя
+    предлагать пресетом: подставленные поля означали бы не то, что написано на
+    кнопке. Поэтому вместо ручного перечня ограничений делаем круг
+    «конфиг → поля → конфиг» и сравниваем — что круг не пережило, то не пресет.
+    """
+    rules = RulesEdition(config)
+    cfg = rules.config
+    rounds, scoring = cfg["rounds"], cfg["scoring"]
+    if rounds.get("mode") != "up_plateau_down":
+        return None
+
+    settings = {
+        "rounds_start": int(rounds.get("start", 1)),
+        "rounds_peak": int(rounds["peak"]),
+        "two_beats_ace": bool(rules.ranking.get("two_beats_ace_same_suit")),
+        "offcolor_beats_oncolor": bool(rules.ranking.get("offcolor_beats_oncolor")),
+        "blind_allowed": rules.blind_allowed,
+        "blind_bonus": int(scoring["blind_bonus"]),
+        "infinite_deck": rules.infinite_deck,
+        "pass_reward": int(scoring["exact_zero_bonus"]),
+        "trick_reward": int(scoring["exact_per_trick"]),
+        "overtrick_penalty": abs(int(scoring["over"])),
+        "undertrick_penalty": abs(int(scoring["under_per_trick"])),
+    }
+    if RulesEdition(config_from_settings(settings)).config != cfg:
+        return None
+    return settings

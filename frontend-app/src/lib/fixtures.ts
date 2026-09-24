@@ -1,5 +1,28 @@
 ﻿import { buildDeck, legalMoves } from './cards';
-import type { CardCode, GameView, Seat } from '../types/game';
+import { FALLBACK_LIMITS, FALLBACK_SETTINGS } from './rulesForm';
+import type { CardCode, GameView, RulesPresetsResponse, Seat } from '../types/game';
+
+/** Заготовки правил для дев-стенда: в ?mock=1 ходить в API некуда. */
+export const FIXTURE_PRESETS: RulesPresetsResponse = {
+  season: { code: 'odessa_season_1', name: 'Сезон 1', description: 'Эталон первого сезона', settings: FALLBACK_SETTINGS },
+  presets: [
+    {
+      code: 'odessa_classic',
+      name: 'Классическая',
+      description: '',
+      settings: {
+        ...FALLBACK_SETTINGS,
+        two_beats_ace: false,
+        offcolor_beats_oncolor: false,
+        blind_allowed: false,
+        blind_bonus: 0,
+        undertrick_penalty: 10,
+      },
+    },
+    { code: 'odessa_infinite', name: 'Безлимитная колода', description: '', settings: { ...FALLBACK_SETTINGS, infinite_deck: true } },
+  ],
+  limits: FALLBACK_LIMITS,
+};
 
 const ODESSA_NAMES = ['Аркадий', 'Софа', 'Моня', 'Циля', 'Жора', 'Бэла'];
 

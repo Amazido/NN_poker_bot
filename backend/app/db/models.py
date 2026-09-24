@@ -120,9 +120,14 @@ class GameRoomModel(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     join_code: Mapped[str] = mapped_column(String(12), unique=True, nullable=False, index=True)
-    rules_edition_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("rules_editions.id", ondelete="RESTRICT"), nullable=False, index=True
+    # Стол играет либо по редакции из каталога, либо по собственным правилам,
+    # которые хозяин собрал при создании. Заполнено ровно одно из двух полей:
+    # ссылка на редакцию нужна, чтобы сезон мог отличить «свой» стол от
+    # эталонного, а не только по совпадению конфигов.
+    rules_edition_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("rules_editions.id", ondelete="RESTRICT"), nullable=True, index=True
     )
+    rules_config: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     status: Mapped[str] = mapped_column(String(20), default=RoomStatus.LOBBY, nullable=False, index=True)
     max_players: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
     created_by: Mapped[uuid.UUID] = mapped_column(
@@ -136,7 +141,7 @@ class GameRoomModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now, nullable=False)
 
-    rules_edition: Mapped["RulesEditionModel"] = relationship(back_populates="rooms")
+    rules_edition: Mapped[Optional["RulesEditionModel"]] = relationship(back_populates="rooms")
     players: Mapped[List["RoomPlayerModel"]] = relationship(back_populates="room")
     rounds: Mapped[List["GameRoundModel"]] = relationship(back_populates="room")
 
