@@ -104,7 +104,7 @@ export function TableRulesForm({ value, limits, disabled, onChange }: TableRules
           onChange={(v) => set('two_beats_ace', v)}
         />
         <Check
-          label="Некозырной джокер бьёт козырного"
+          label="Некозырной джокер бьёт козырного джокера"
           checked={value.offcolor_beats_oncolor}
           disabled={disabled}
           onChange={(v) => set('offcolor_beats_oncolor', v)}

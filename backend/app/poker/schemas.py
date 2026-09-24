@@ -18,7 +18,7 @@ class TableRulesSettings(BaseModel):
     rounds_start: int = Field(ge=1, description="Сколько карт в первой раздаче")
     rounds_peak: int = Field(ge=1, description="Сколько карт в самой большой раздаче")
     two_beats_ace: bool = Field(description="Двойка бьёт туза своей масти")
-    offcolor_beats_oncolor: bool = Field(description="Некозырной джокер бьёт козырного")
+    offcolor_beats_oncolor: bool = Field(description="Некозырной джокер бьёт козырного джокера")
     blind_allowed: bool = Field(description="Можно заказать, не открывая руку")
     blind_bonus: int = Field(default=0, ge=0, description="Надбавка за точный заказ вслепую")
     infinite_deck: bool = Field(description="Безлимитная колода: карты повторяются")

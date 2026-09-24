@@ -21,7 +21,9 @@
 старшим считается тот джокер, что был вскрыт ведущим колоду.
 
 Флаги редакции правил:
-  offcolor_beats_oncolor  — некозырной джокер берёт козырного (тогда он старший).
+  offcolor_beats_oncolor  — некозырной джокер берёт козырного, когда оба в одной
+                            взятке (как двойка — туза своей масти). Без козырного
+                            джокера рядом некозырной остаётся ниже козырей.
   two_beats_ace_same_suit — двойка бьёт туза своей масти, если оба в одном сбросе.
   duplicate_first_wins    — при безлимитной колоде две одинаковые карты в одной
                             взятке — обычное дело; берёт положивший раньше
@@ -206,10 +208,12 @@ def trick_winner(
     oncolor_joker = (pick([s for s, _ in oncolor]), oncolor[0][1]) if oncolor else None
     offcolor_joker = (pick([s for s, _ in offcolor]), offcolor[0][1]) if offcolor else None
 
-    # 1. Джокеры высшего порядка.
-    if offcolor_beats and offcolor_joker is not None:
-        return offcolor_joker[0]  # редакция: некозырной джокер бьёт козырного
+    # 1. Джокеры высшего порядка. Флаг переставляет джокеров между собой: без
+    #    козырного джокера в этой же взятке некозырному нечего бить, и он идёт
+    #    обычным порядком — ниже козырей (п. 3).
     if oncolor_joker is not None:
+        if offcolor_beats and offcolor_joker is not None:
+            return offcolor_joker[0]
         return oncolor_joker[0]
 
     # 2. Козыри.

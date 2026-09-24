@@ -137,6 +137,23 @@ def test_offcolor_beats_oncolor_flag():
     ) == 1
 
 
+def test_offcolor_beats_oncolor_flag_does_not_beat_trump_card():
+    # Флаг про встречу двух джокеров. Козырь ♠, сброс ♥ (цвет XR): джокер берёт
+    # масть сброса, но положенный следом козырь забирает взятку.
+    plays = [(0, "QH"), (1, "XR"), (2, "5S")]
+    assert C.trick_winner(
+        plays, trump_suit="S", lead_suit="H", flags={"offcolor_beats_oncolor": True}
+    ) == 2
+
+
+def test_offcolor_beats_oncolor_flag_keeps_leading_joker_below_trump():
+    # То же с ведущим джокером: масть сброса не задана, козырь всё равно старше.
+    plays = [(0, "XR"), (1, "AH"), (2, "2S")]
+    assert C.trick_winner(
+        plays, trump_suit="S", lead_suit=None, flags={"offcolor_beats_oncolor": True}
+    ) == 2
+
+
 # === Безлимитная колода и одинаковые карты ===
 
 def test_infinite_deal_may_repeat_cards():

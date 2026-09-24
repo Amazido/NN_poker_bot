@@ -304,7 +304,7 @@ class RulesEdition:
         if self.ranking.get("two_beats_ace_same_suit"):
             out.append("Двойка бьёт туза своей масти")
         if self.ranking.get("offcolor_beats_oncolor"):
-            out.append("Некозырной джокер бьёт козырного")
+            out.append("Некозырной джокер бьёт козырного джокера")
         if not self.hook_enabled:
             out.append("Без «крюка» у сдающего")
 
