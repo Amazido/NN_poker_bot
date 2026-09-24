@@ -17,7 +17,7 @@ from app.db.models import GameRoomModel, RoomStatus, UserModel, UserType
 from app.logger import poker_log
 from app.poker import channels, engine
 from app.poker import state as state_store
-from app.poker.rules import RulesEdition
+from app.poker.rules import RulesConfigError, RulesEdition
 from app.repositories.pg import (
     RoomRepository,
     RoundRepository,
@@ -75,7 +75,12 @@ class PokerService:
         if not edition:
             raise Conflict("No active rules edition found (seed one first)")
 
-        rules = RulesEdition(edition.config)
+        # Негодную редакцию ловим здесь, а не в середине матча на большой раздаче.
+        try:
+            rules = RulesEdition(edition.config, validate=True)
+        except RulesConfigError as e:
+            raise Conflict(f"Редакция правил {edition.code} непригодна: {e}") from e
+
         mp = max_players or rules.max_players
         mp = max(rules.min_players, min(mp, rules.max_players))
 
@@ -227,6 +232,14 @@ class PokerService:
         n = len(players)
         if n < rules.min_players:
             raise Conflict(f"Need at least {rules.min_players} players (have {n})")
+        if n > rules.max_players:
+            raise Conflict(f"Too many players for this rules edition (max {rules.max_players}, have {n})")
+        # Последовательность раздач зависит от числа игроков: редакция может быть
+        # валидна для троих и невозможна для пятерых.
+        try:
+            rules.round_sequence(n)
+        except RulesConfigError as e:
+            raise Conflict(f"Нельзя начать матч на {n} игроков: {e}") from e
 
         seats = []
         bot_seats = []
@@ -249,6 +262,7 @@ class PokerService:
             seats=seats,
             rules_config=edition.config if edition else None,
             starting_dealer=starting_dealer,
+            rules_meta={"code": edition.code, "name": edition.name} if edition else None,
         )
         if bot_seats:
             state["left_seats"] = bot_seats
@@ -357,9 +371,15 @@ class PokerService:
                 "score": p.score,
                 "is_bot": bool(u and u.user_type == UserType.BOT),
             })
+        edition = await self.rules_repo.get(str(room.rules_edition_id))
         return {
             "room_id": str(room.id),
             "join_code": room.join_code,
+            "rules": state_store.rules_view(
+                edition.config if edition else None,
+                code=edition.code if edition else "",
+                name=edition.name if edition else "",
+            ),
             "status": room.status,
             "match_over": room.status == RoomStatus.FINISHED,
             "seats": seats,

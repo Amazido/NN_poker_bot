@@ -33,10 +33,13 @@ def new_game_state(
     rules_config: Optional[dict],
     starting_dealer: int,
     rng: Optional[random.Random] = None,
+    rules_meta: Optional[dict] = None,
 ) -> GameState:
     """Создать состояние матча и раздать первый раунд.
 
     seats — список {"seat","user_id","username","score"} (score можно 0).
+    rules_meta — {"code","name"} редакции: конфиг снапшотится целиком, но имя
+    редакции в нём не хранится, а показать его игроку надо.
     """
     rules = RulesEdition(rules_config)
     seats_sorted = sorted(seats, key=lambda s: s["seat"])
@@ -47,6 +50,7 @@ def new_game_state(
     state: GameState = {
         "room_id": room_id,
         "rules": rules.config,
+        "rules_meta": rules_meta or {},
         "status": "playing",
         "match_over": False,
         "seats": seats_sorted,
@@ -70,7 +74,7 @@ def start_round(state: GameState, rng: Optional[random.Random] = None) -> List[E
     dealer_seat = (state["starting_dealer"] + idx) % n
     first_seat = _next_seat(dealer_seat, n)
 
-    hands, trump_card = C.deal(n, cards_count, rng)
+    hands, trump_card = C.deal(n, cards_count, rng, jokers=rules.jokers_count)
     trump_suit, no_trump = C.determine_trump(trump_card)
 
     round_state = {
@@ -210,7 +214,7 @@ def _apply_play(
         trump_suit=r["trump_suit"],
         lead_suit=ct["lead_suit"],
         no_trump_high_joker=r["no_trump_high_joker"],
-        flags=rules.flags,
+        flags=rules.ranking,
     )
     r["tricks_won"][str(winner)] += 1
     r["last_trick"] = {

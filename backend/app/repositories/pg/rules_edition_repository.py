@@ -1,6 +1,6 @@
 """Репозиторий редакций правил."""
 import uuid
-from typing import Optional
+from typing import List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,6 +31,18 @@ class RulesEditionRepository:
             .limit(1)
         )
         return res.scalar_one_or_none()
+
+    async def list_active(self) -> List[RulesEditionModel]:
+        """Активные редакции, по одной (наибольшей) версии на каждый code."""
+        res = await self.session.execute(
+            select(RulesEditionModel)
+            .where(RulesEditionModel.is_active.is_(True))
+            .order_by(RulesEditionModel.code, RulesEditionModel.version.desc())
+        )
+        latest: dict[str, RulesEditionModel] = {}
+        for edition in res.scalars():
+            latest.setdefault(edition.code, edition)
+        return list(latest.values())
 
     async def get_default(self) -> Optional[RulesEditionModel]:
         """Любая активная редакция (приоритет — наибольшая версия)."""

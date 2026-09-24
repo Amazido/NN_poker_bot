@@ -66,15 +66,20 @@ def color_of_suit(suit: str) -> str:
     return "red" if suit in RED_SUITS else "black"
 
 
-def build_deck() -> List[str]:
-    """Полная колода 54 карты (52 + 2 джокера)."""
+def build_deck(jokers: int = 2) -> List[str]:
+    """Колода: 52 обычных карты плюс `jokers` джокеров (2 — красный и чёрный)."""
     deck = [f"{r}{s}" for s in SUITS for r in RANK_CODES]
-    deck.extend(JOKERS)
+    deck.extend(JOKERS[:jokers])
     return deck
 
 
+def deck_size(jokers: int = 2) -> int:
+    """Размер колоды при заданном числе джокеров."""
+    return 52 + jokers
+
+
 def deal(
-    n_players: int, cards_count: int, rng: Optional[random.Random] = None
+    n_players: int, cards_count: int, rng: Optional[random.Random] = None, jokers: int = 2
 ) -> Tuple[List[List[str]], str]:
     """Раздать по cards_count карт каждому и вскрыть ведущую колоду карту (козырь).
 
@@ -84,7 +89,7 @@ def deal(
         ValueError: если в колоде не хватает карт.
     """
     needed = n_players * cards_count + 1
-    deck = build_deck()
+    deck = build_deck(jokers)
     if needed > len(deck):
         raise ValueError(
             f"Deck too small: need {needed} for {n_players}x{cards_count}, have {len(deck)}"

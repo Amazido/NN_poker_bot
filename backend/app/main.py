@@ -16,33 +16,36 @@ from app.poker import engine
 from app.poker import state as state_store
 from app.poker.router import router as poker_router
 from app.poker.rules import RulesEdition
+from app.poker.rules_router import router as rules_router
 
 
-async def ensure_default_rules() -> None:
-    """Создать дефолтную редакцию правил odessa_classic v1, если её ещё нет."""
+async def ensure_builtin_rules() -> None:
+    """Досидить встроенные редакции правил, которых ещё нет в БД.
+
+    Существующие не трогаем: у них своя история комнат, а конфиг мог быть
+    поправлен руками. Изменение правил выпускается новой версией.
+    """
     from app.db.base import async_session_maker
-    from app.poker.rules import DEFAULT_CONFIG
+    from app.poker.editions import BUILTIN_EDITIONS
     from app.repositories.pg import RulesEditionRepository
 
     async with async_session_maker() as session:
         repo = RulesEditionRepository(session)
-        existing = await repo.get_active_by_code("odessa_classic")
-        if existing:
-            startup_log.info("Rules edition odessa_classic v{} present", existing.version)
-            return
-        await repo.create(
-            code="odessa_classic",
-            version=1,
-            name="Одесский покер — классическая редакция",
-            config=DEFAULT_CONFIG,
-            meta={
-                "description": "Колода 54, 3-5 игроков, раунды 1..10..1 (18+n), "
-                "джокеры по цвету козыря, крюк на последнем заказе.",
-                "author": "system",
-            },
-            is_active=True,
-        )
-        startup_log.info("Seeded rules edition odessa_classic v1")
+        for spec in BUILTIN_EDITIONS:
+            existing = await repo.get_active_by_code(spec["code"])
+            if existing:
+                continue
+            # Негодный конфиг лучше поймать на старте, чем в середине матча.
+            RulesEdition(spec["config"], validate=True)
+            await repo.create(
+                code=spec["code"],
+                version=spec["version"],
+                name=spec["name"],
+                config=spec["config"],
+                meta={"description": spec["description"], "author": "system"},
+                is_active=True,
+            )
+            startup_log.info("Seeded rules edition {} v{}", spec["code"], spec["version"])
 
 
 def _auto_action(state: dict):
@@ -134,7 +137,7 @@ async def lifespan(app: FastAPI):
     await init_redis()
     reconnect_task = asyncio.create_task(redis_reconnect_task())
     await init_centrifugo()
-    await ensure_default_rules()
+    await ensure_builtin_rules()
     timeout_task = asyncio.create_task(turn_timeout_task())
     startup_log.success("Application started")
 
@@ -176,6 +179,7 @@ async def not_authenticated_handler(request: Request, exc: NotAuthenticated):
 
 app.include_router(auth_router)
 app.include_router(poker_router)
+app.include_router(rules_router)
 
 
 @app.get("/")

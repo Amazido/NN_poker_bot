@@ -122,6 +122,10 @@ async def client(monkeypatch):
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://e2e.local") as c:
+        # Тестам про редакции правил нужно лезть в БД мимо API: завести негодную
+        # редакцию или поправить конфиг у идущего матча. Движок сессий создаётся
+        # здесь же, поэтому отдаём его на клиенте, а не отдельной фикстурой.
+        c.test_sessionmaker = TestSession  # type: ignore[attr-defined]
         yield c
 
     app.dependency_overrides.clear()

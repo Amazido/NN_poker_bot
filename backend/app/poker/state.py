@@ -68,6 +68,15 @@ async def list_active_rooms() -> list[str]:
         return []
 
 
+def rules_view(config: Optional[dict], code: str = "", name: str = "") -> Dict[str, Any]:
+    """Правила стола для клиента: чем эта редакция отличается, коротко.
+
+    Игрок должен видеть, по каким правилам сел играть, — редакций теперь несколько.
+    """
+    rules = RulesEdition(config)
+    return {"code": code, "name": name, "summary": rules.summary()}
+
+
 def public_view(state: GameState) -> Dict[str, Any]:
     """Публичный вид комнаты — без чужих рук."""
     r = state.get("round")
@@ -101,6 +110,11 @@ def public_view(state: GameState) -> Dict[str, Any]:
         "round_index": state["round_index"],
         "rounds_total": len(state["sequence"]),
         "round": round_public,
+        "rules": rules_view(
+            state.get("rules"),
+            code=(state.get("rules_meta") or {}).get("code", ""),
+            name=(state.get("rules_meta") or {}).get("name", ""),
+        ),
         "turn": {"kind": kind, "seat": seat},
         "left_seats": state.get("left_seats", []),
         "turn_deadline": state.get("turn_deadline"),
