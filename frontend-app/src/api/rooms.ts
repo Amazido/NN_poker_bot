@@ -38,6 +38,14 @@ export function bid(roomId: string, value: number): Promise<PublicView> {
   });
 }
 
+/** Отказаться от слепого заказа и посмотреть свои карты. Очередь не двигает. */
+export function openHand(roomId: string): Promise<PublicView> {
+  return apiFetch<PublicView>(`/rooms/${roomId}/action`, {
+    method: 'POST',
+    body: { action_type: 'open_hand', payload: {} },
+  });
+}
+
 export function playCard(roomId: string, card: CardCode): Promise<PublicView> {
   return apiFetch<PublicView>(`/rooms/${roomId}/action`, {
     method: 'POST',

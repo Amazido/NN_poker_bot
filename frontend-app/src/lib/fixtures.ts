@@ -4,15 +4,17 @@ import type { CardCode, GameView, Seat } from '../types/game';
 const ODESSA_NAMES = ['Аркадий', 'Софа', 'Моня', 'Циля', 'Жора', 'Бэла'];
 
 const FIXTURE_RULES = {
-  code: 'odessa_circular',
-  name: 'Круговое старшинство',
+  code: 'odessa_season_1',
+  name: 'Сезон 1',
   summary: [
     'Раздачи от 1 до 10 карт',
     'Игроков 3–5',
     'Двойка бьёт туза своей масти',
     'Некозырной джокер бьёт козырного',
-    'Очки: +10 за взятку при точном заказе, -5 за перебор, -10 за недобранную',
+    'Можно заказать вслепую: +5 за точный заказ',
+    'Очки: +10 за взятку при точном заказе, -5 за перебор, -5 за недобранную',
   ],
+  blind_bonus: 5,
 };
 
 function shuffled(arr: CardCode[], seed: number): CardCode[] {
@@ -26,7 +28,7 @@ function shuffled(arr: CardCode[], seed: number): CardCode[] {
   return a;
 }
 
-export type FixtureScreen = 'waiting' | 'bidding' | 'playing';
+export type FixtureScreen = 'waiting' | 'bidding' | 'bidding-blind' | 'playing';
 
 /** Фейковые данные в форме реального GameView — для разработки экранов без бэка (sub-project A). */
 export function makeFixture(screenType: FixtureScreen, n: number): GameView {
@@ -69,10 +71,15 @@ export function makeFixture(screenType: FixtureScreen, n: number): GameView {
     };
   }
 
-  if (screenType === 'bidding') {
+  if (screenType === 'bidding' || screenType === 'bidding-blind') {
+    const blind = screenType === 'bidding-blind';
     const bidTurnIdx = meSeat;
     const bids: Record<string, number> = {};
-    for (let i = 0; i < bidTurnIdx; i++) bids[i] = i % (cardsCount + 1);
+    const blindBids: Record<string, boolean> = {};
+    for (let i = 0; i < bidTurnIdx; i++) {
+      bids[i] = i % (cardsCount + 1);
+      blindBids[i] = blind && i % 2 === 0;
+    }
     const myTurn = bidTurnIdx === meSeat;
     const othersSum = Object.values(bids).reduce((a, b) => a + b, 0);
     const isLast = Object.keys(bids).length === n - 1;
@@ -107,6 +114,7 @@ export function makeFixture(screenType: FixtureScreen, n: number): GameView {
         last_trick: null,
         result: null,
         hand_counts: handCounts,
+        blind_bids: blindBids,
       },
       turn: { kind: 'bid', seat: bidTurnIdx },
       left_seats: [],
@@ -114,7 +122,10 @@ export function makeFixture(screenType: FixtureScreen, n: number): GameView {
       me: {
         room_id: 'r1',
         seat: meSeat,
-        hand: hands[meSeat],
+        hand: blind ? [] : hands[meSeat],
+        hand_hidden: blind,
+        hand_count: cardsCount,
+        can_open_hand: blind,
         your_turn: myTurn,
         available_actions: myTurn
           ? { type: 'bid', options: forbidden === null ? options : options.filter((o) => o !== forbidden) }
@@ -169,6 +180,7 @@ export function makeFixture(screenType: FixtureScreen, n: number): GameView {
       last_trick: { plays: [{ seat: dealerSeat, card: 'AS' }], winner: winnerOfLast },
       result: null,
       hand_counts: handCounts,
+      blind_bids: {},
     },
     turn: { kind: 'play', seat: currentTurnSeat },
     left_seats: [],
@@ -177,6 +189,9 @@ export function makeFixture(screenType: FixtureScreen, n: number): GameView {
       room_id: 'r1',
       seat: meSeat,
       hand: hands[meSeat],
+      hand_hidden: false,
+      hand_count: hands[meSeat].length,
+      can_open_hand: false,
       your_turn: myTurn,
       available_actions: myTurn ? { type: 'play', cards: legalMoves(hands[meSeat], leadSuit, trumpSuit) } : null,
       round_index: 3,

@@ -298,6 +298,7 @@ class PokerService:
         round_index_before = state["round_index"]
         round_before = state["round"]
         phase_before = round_before["phase"]
+        turn_before = engine.current_turn(state)
 
         round_row = await self.round_repo.get_by_room_index(room.id, round_index_before)
         if not round_row:
@@ -340,7 +341,10 @@ class PokerService:
             room.id, {s["seat"]: s["score"] for s in state["seats"]}
         )
 
-        self._stamp_deadline(state)
+        # Дедлайн двигаем, только если очередь реально сменилась: «открыть руку»
+        # ходом не является, и ею нельзя дарить текущему игроку лишнее время.
+        if engine.current_turn(state) != turn_before:
+            self._stamp_deadline(state)
         await state_store.save_state(room_id, state)
         if state.get("match_over"):
             await state_store.remove_active_room(room_id)

@@ -7,11 +7,14 @@ export function BidPad({
   options,
   onBid,
   deadline,
+  blind,
 }: {
   maxBid: number;
   options: number[];
   onBid: (n: number) => void;
   deadline: string | null;
+  /** Заказ идёт втёмную: надбавка за попадание, но карт игрок пока не видел. */
+  blind?: { bonus: number };
 }) {
   const allowed = useMemo(() => new Set(options), [options]);
   const [value, setValue] = useState(0);
@@ -38,7 +41,19 @@ export function BidPad({
       </div>
       <button type="button" className={styles.confirm} disabled={!canConfirm} onClick={() => onBid(value)}>
         <TurnTimer deadline={deadline} size={22} invert />
-        {canConfirm ? 'Заказать' : 'Нельзя'}
+        {canConfirm ? (blind ? `Заказать втёмную (+${blind.bonus})` : 'Заказать') : 'Нельзя'}
+      </button>
+    </div>
+  );
+}
+
+/** Отказ от «тёмной»: посмотреть карты и потерять надбавку. Ходом не является. */
+export function OpenHandRow({ bonus, onOpen }: { bonus: number; onOpen: () => void }) {
+  return (
+    <div className={styles.blindRow}>
+      <span>Карты закрыты{bonus > 0 ? `: точный заказ втёмную даст +${bonus}` : ''}</span>
+      <button type="button" className={styles.blindBtn} onClick={onOpen}>
+        Открыть руку
       </button>
     </div>
   );

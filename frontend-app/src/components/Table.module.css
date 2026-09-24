@@ -225,6 +225,16 @@
 .oppMeta b {
   color: var(--ink);
 }
+.blindMark {
+  margin-left: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--muted-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0 5px;
+}
 .oppBadge {
   display: inline-block;
   margin-top: 3px;

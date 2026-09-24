@@ -7,10 +7,15 @@ function badgeClass(kind: 'turn' | 'waiting' | 'done') {
   return `${styles.oppBadge} ${styles[kind]}`;
 }
 
-function TrickLine({ won, bid }: { won: number; bid: number | undefined }) {
+function TrickLine({ won, bid, blind }: { won: number; bid: number | undefined; blind?: boolean }) {
   return (
     <div className={styles.oppMeta}>
       взял <b>{won}</b>/{bid ?? '—'}
+      {blind && (
+        <span className={styles.blindMark} title="Заказ сделан втёмную">
+          втёмную
+        </span>
+      )}
     </div>
   );
 }
@@ -61,7 +66,7 @@ function OpponentSeat({
         )}
       </div>
       <div className={styles.oppName}>{seat.username}</div>
-      {bid !== undefined && <TrickLine won={won} bid={bid} />}
+      {bid !== undefined && <TrickLine won={won} bid={bid} blind={r.blind_bids?.[seat.seat]} />}
       {hasLeft ? (
         <span className={badgeClass('waiting')}>Вышел · авто-ход</span>
       ) : mode === 'bidding' ? (

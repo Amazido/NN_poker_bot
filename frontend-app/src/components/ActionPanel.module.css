@@ -68,6 +68,30 @@
   opacity: 0.45;
   cursor: not-allowed;
 }
+.blindRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.blindBtn {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 12.5px;
+  padding: 7px 12px;
+  border-radius: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.blindBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
 .waitingNote,
 .playHint {
   display: flex;

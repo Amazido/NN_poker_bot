@@ -28,6 +28,8 @@ export interface LastTrick {
 export interface RoundResult {
   bid: number;
   won: number;
+  /** Заказ сделан вслепую — при попадании к delta добавлена надбавка. */
+  blind: boolean;
   delta: number;
   total: number;
 }
@@ -48,6 +50,8 @@ export interface RoundPublic {
   last_trick: LastTrick | null;
   result: Record<string, RoundResult> | null;
   hand_counts: Record<string, number>; // чужие руки — только количество карт
+  /** Кто заказал, не открывая руку. Видно всем — это часть интриги. */
+  blind_bids: Record<string, boolean>;
 }
 
 /** Правила стола. Редакций несколько, игрок должен видеть, во что сел играть. */
@@ -56,6 +60,8 @@ export interface RulesView {
   name: string;
   /** Отличия редакции короткими фразами — готовы к показу как есть. */
   summary: string[];
+  /** Надбавка за точный заказ втёмную; 0 — правило выключено. */
+  blind_bonus: number;
 }
 
 /** Элемент каталога редакций (GET /rules/editions) — для выбора при создании стола. */
@@ -104,7 +110,13 @@ export interface PrivateView {
    * комнатой: недоигранный матч иначе перебивает руку в текущем. */
   room_id: string;
   seat: number;
+  /** Пусто, пока рука закрыта: при «тёмной» игрок не видит и своих карт. */
   hand: CardCode[];
+  hand_hidden: boolean;
+  /** Сколько карт на руке — известно и при закрытой руке. */
+  hand_count: number;
+  /** Можно нажать «открыть руку» — то есть отказаться от слепого заказа. */
+  can_open_hand: boolean;
   your_turn: boolean;
   available_actions: AvailableActions | null;
   /** Публичный и приватный вид прилетают отдельными WS-сообщениями — сверяем

@@ -1,6 +1,6 @@
 import type { CardCode } from '../types/game';
 import { STAGE_W } from '../lib/layout';
-import { Card } from './Card';
+import { Card, CardBack } from './Card';
 import styles from './Hand.module.css';
 
 const CARD_W = 56;
@@ -39,6 +39,22 @@ export function Hand({ cards, legal, onPlay, scoreDelta }: HandProps) {
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+/** Рубашки вместо карт: при «тёмной» игрок не видит и собственной руки. */
+export function HiddenHand({ count }: { count: number }) {
+  const overlap = overlapPx(count);
+  return (
+    <div className={styles.tray}>
+      <div className={styles.row}>
+        {Array.from({ length: count }, (_, i) => (
+          <div key={i} className={styles.slot} style={{ marginLeft: i === 0 ? 0 : -overlap }}>
+            <CardBack />
+          </div>
+        ))}
       </div>
     </div>
   );

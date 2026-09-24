@@ -61,6 +61,7 @@ class RoundPhase:
 class ActionType:
     BID = "bid"            # заказ взяток
     PLAY_CARD = "play_card"  # ход картой
+    OPEN_HAND = "open_hand"  # раскрыть руку до заказа (отказ от «тёмной»)
 
 
 def _now() -> datetime:

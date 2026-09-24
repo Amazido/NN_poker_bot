@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import styles from './App.module.css';
 import { ensureLoggedIn, getMe } from './api/auth';
 import { clearToken, ApiError } from './api/http';
-import { createRoom, joinRoom, startMatch, bid, playCard, leaveRoomApi, addBot } from './api/rooms';
+import { createRoom, joinRoom, startMatch, bid, openHand, playCard, leaveRoomApi, addBot } from './api/rooms';
 import { useGameView } from './api/useGameView';
 import { getTelegramWebApp, getStartParam } from './api/telegram';
 import { resolveScreen } from './screen-resolver';
@@ -136,6 +136,15 @@ export default function App() {
     }
   }
 
+  async function handleOpenHand() {
+    if (!roomId) return;
+    try {
+      await openHand(roomId);
+    } catch (e) {
+      setActionError(actionErrorMessage(e));
+    }
+  }
+
   async function handlePlay(card: string) {
     if (!roomId) return;
     try {
@@ -188,6 +197,7 @@ export default function App() {
         <BiddingScreen
           view={resolved.view}
           onBid={handleBid}
+          onOpenHand={handleOpenHand}
           onLeave={leaveRoom}
           lastRoundScore={lastRoundScore}
           roomCode={roomCode ?? undefined}

@@ -1,4 +1,4 @@
-"""Карты, колода и правила старшинства во взятке (Одесский покер).
+﻿"""Карты, колода и правила старшинства во взятке (Одесский покер).
 
 Кодировка карты — строка:
   - обычная карта: <ранг><масть>, напр. "AS" (туз пик), "TD" (10 бубён), "2C".
@@ -23,6 +23,9 @@
 Флаги редакции правил:
   offcolor_beats_oncolor  — некозырной джокер берёт козырного (тогда он старший).
   two_beats_ace_same_suit — двойка бьёт туза своей масти, если оба в одном сбросе.
+  duplicate_first_wins    — при безлимитной колоде две одинаковые карты в одной
+                            взятке — обычное дело; берёт положивший раньше
+                            (иначе — позже).
 """
 import random
 from typing import Dict, List, Optional, Tuple
@@ -79,25 +82,38 @@ def deck_size(jokers: int = 2) -> int:
 
 
 def deal(
-    n_players: int, cards_count: int, rng: Optional[random.Random] = None, jokers: int = 2
+    n_players: int,
+    cards_count: int,
+    rng: Optional[random.Random] = None,
+    jokers: int = 2,
+    infinite: bool = False,
 ) -> Tuple[List[List[str]], str]:
     """Раздать по cards_count карт каждому и вскрыть ведущую колоду карту (козырь).
+
+    infinite — «безлимитная колода»: каждая карта тянется независимо, поэтому
+    одинаковые карты возможны и в одной руке, и у разных игроков. Раздача при
+    этом не ограничена размером колоды.
 
     Returns:
         (hands, trump_card) — hands[i] рука игрока i, trump_card — вскрытая карта.
     Raises:
-        ValueError: если в колоде не хватает карт.
+        ValueError: если в конечной колоде не хватает карт.
     """
-    needed = n_players * cards_count + 1
+    rng = rng or random.Random()
     deck = build_deck(jokers)
+
+    if infinite:
+        hands = [[rng.choice(deck) for _ in range(cards_count)] for _ in range(n_players)]
+        return hands, rng.choice(deck)
+
+    needed = n_players * cards_count + 1
     if needed > len(deck):
         raise ValueError(
             f"Deck too small: need {needed} for {n_players}x{cards_count}, have {len(deck)}"
         )
-    rng = rng or random.Random()
     rng.shuffle(deck)
 
-    hands: List[List[str]] = [[] for _ in range(n_players)]
+    hands = [[] for _ in range(n_players)]
     idx = 0
     for _ in range(cards_count):
         for p in range(n_players):
@@ -150,24 +166,32 @@ def trick_winner(
     flags = flags or {}
     present = [c for _, c in plays]
     two_beats_ace = flags.get("two_beats_ace_same_suit", False)
+    # При безлимитной колоде две одинаковые карты в одной взятке — норма, и
+    # «кто из них старше» становится настоящим правилом, а не мелочью.
+    first_wins = flags.get("duplicate_first_wins", True)
 
     def erank(card: str) -> int:
         return _effective_rank(card, present, two_beats_ace)
+
+    def pick(seats: List[int]) -> int:
+        """Разрешить ничью между равными картами по порядку хода."""
+        return seats[0] if first_wins else seats[-1]
 
     def best_of_suit(suit: str) -> Optional[int]:
         cand = [(s, c) for s, c in plays if not is_joker(c) and suit_of(c) == suit]
         if not cand:
             return None
-        return max(cand, key=lambda sc: erank(sc[1]))[0]
+        top = max(erank(c) for _, c in cand)
+        return pick([s for s, c in cand if erank(c) == top])
 
     # === БЕЗ КОЗЫРЯ (колоду ведёт джокер) ===
     if trump_suit is None:
         jokers = [(s, c) for s, c in plays if is_joker(c)]
         if jokers:
-            for s, c in jokers:
-                if c == no_trump_high_joker:
-                    return s
-            return jokers[0][0]
+            high = [s for s, c in jokers if c == no_trump_high_joker]
+            if high:
+                return pick(high)
+            return pick([s for s, _ in jokers])
         if lead_suit is not None:
             w = best_of_suit(lead_suit)
             if w is not None:
@@ -177,12 +201,10 @@ def trick_winner(
     # === ЕСТЬ КОЗЫРЬ ===
     trump_color = color_of_suit(trump_suit)
     offcolor_beats = flags.get("offcolor_beats_oncolor", False)
-    oncolor_joker = next(
-        ((s, c) for s, c in plays if is_joker(c) and joker_color(c) == trump_color), None
-    )
-    offcolor_joker = next(
-        ((s, c) for s, c in plays if is_joker(c) and joker_color(c) != trump_color), None
-    )
+    oncolor = [(s, c) for s, c in plays if is_joker(c) and joker_color(c) == trump_color]
+    offcolor = [(s, c) for s, c in plays if is_joker(c) and joker_color(c) != trump_color]
+    oncolor_joker = (pick([s for s, _ in oncolor]), oncolor[0][1]) if oncolor else None
+    offcolor_joker = (pick([s for s, _ in offcolor]), offcolor[0][1]) if offcolor else None
 
     # 1. Джокеры высшего порядка.
     if offcolor_beats and offcolor_joker is not None:

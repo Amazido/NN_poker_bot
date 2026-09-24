@@ -9,6 +9,7 @@ import { PlayingScreen } from './screens/PlayingScreen';
 const SCREENS: { id: FixtureScreen; label: string }[] = [
   { id: 'waiting', label: 'Ожидание' },
   { id: 'bidding', label: 'Торги' },
+  { id: 'bidding-blind', label: 'Торги втёмную' },
   { id: 'playing', label: 'Сброс' },
 ];
 const PLAYER_COUNTS = [2, 3, 4, 5, 6];
@@ -74,7 +75,9 @@ export default function App() {
               onAddBot={() => console.log('add bot')}
             />
           )}
-          {resolved.type === 'bidding' && <BiddingScreen view={resolved.view} onBid={(n) => console.log('bid', n)} />}
+          {resolved.type === 'bidding' && (
+            <BiddingScreen view={resolved.view} onBid={(n) => console.log('bid', n)} onOpenHand={() => console.log('open hand')} />
+          )}
           {resolved.type === 'playing' && <PlayingScreen view={resolved.view} onPlay={(c) => console.log('play', c)} />}
           {resolved.type === 'unsupported' && <p>Экран для этой фазы ещё не спроектирован (sub-project C).</p>}
         </div>

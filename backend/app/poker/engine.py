@@ -74,8 +74,15 @@ def start_round(state: GameState, rng: Optional[random.Random] = None) -> List[E
     dealer_seat = (state["starting_dealer"] + idx) % n
     first_seat = _next_seat(dealer_seat, n)
 
-    hands, trump_card = C.deal(n, cards_count, rng, jokers=rules.jokers_count)
+    hands, trump_card = C.deal(
+        n, cards_count, rng, jokers=rules.jokers_count, infinite=rules.infinite_deck
+    )
     trump_suit, no_trump = C.determine_trump(trump_card)
+
+    # При «тёмной» рука закрыта от самого игрока, пока он её не откроет: заказ,
+    # сделанный до этого, считается слепым. Без правила — открыта сразу, чтобы
+    # остальному коду не приходилось различать два режима.
+    hand_open = {str(seat): not rules.blind_allowed for seat in range(n)}
 
     round_state = {
         "cards_count": cards_count,
@@ -87,6 +94,8 @@ def start_round(state: GameState, rng: Optional[random.Random] = None) -> List[E
         "no_trump_high_joker": trump_card if no_trump else None,
         "phase": "bidding",
         "hands": {str(seat): hands[seat] for seat in range(n)},
+        "hand_open": hand_open,
+        "blind_bids": {},
         "bids": {},
         "bid_turn": first_seat,
         "tricks_won": {str(seat): 0 for seat in range(n)},
@@ -125,7 +134,32 @@ def apply_action(
         return _apply_bid(state, seat, int(payload["bid"]))
     if action_type == "play_card":
         return _apply_play(state, seat, str(payload["card"]), rng)
+    if action_type == "open_hand":
+        return _apply_open_hand(state, seat)
     raise InvalidMove(f"Unknown action: {action_type}")
+
+
+# === Открыть руку («тёмная») ===
+
+def _apply_open_hand(state: GameState, seat: int) -> List[Event]:
+    """Посмотреть свои карты до заказа — отказавшись от слепого заказа.
+
+    Не ход: очередь и дедлайн не двигаются. Открыться можно в любой момент
+    торгов, пока сам не заказал, — ждать своей очереди, чтобы взглянуть на
+    карты, незачем.
+    """
+    r = state["round"]
+    if r["phase"] != "bidding":
+        raise InvalidMove("Hand can only be opened during bidding")
+    if not RulesEdition(state["rules"]).blind_allowed:
+        raise InvalidMove("This rules edition has no blind bidding")
+    if str(seat) in r["bids"]:
+        raise InvalidMove("You have already bid")
+    if r.get("hand_open", {}).get(str(seat), True):
+        raise InvalidMove("Hand is already open")
+
+    r["hand_open"][str(seat)] = True
+    return [{"type": "hand_opened", "seat": seat}]
 
 
 # === Торги ===
@@ -148,10 +182,18 @@ def _apply_bid(state: GameState, seat: int, bid: int) -> List[Event]:
         raise InvalidMove(f"Bid {bid} not allowed (allowed: {allowed})")
 
     r["bids"][str(seat)] = bid
-    events: List[Event] = [{"type": "bid_made", "seat": seat, "bid": bid}]
+    # Заказ вслепую — это просто заказ при нераскрытой руке, отдельного действия
+    # для него нет. У раздач, начатых до появления «тёмной», ключа нет вовсе:
+    # они доигрываются в старом режиме, а не падают.
+    blind = not r.get("hand_open", {}).get(str(seat), True)
+    r.setdefault("blind_bids", {})[str(seat)] = blind
+    events: List[Event] = [{"type": "bid_made", "seat": seat, "bid": bid, "blind": blind}]
 
     if len(r["bids"]) == n:
         # Торги закончены → фаза розыгрыша, первую взятку ведёт first_seat.
+        # Играют все с открытыми руками: «тёмная» касается только заказа.
+        if "hand_open" in r:
+            r["hand_open"] = {str(s): True for s in range(n)}
         r["bid_turn"] = None
         r["phase"] = "playing"
         r["current_trick"] = {
@@ -258,11 +300,13 @@ def _finish_round(state: GameState) -> List[Event]:
     for seat in range(state["n_players"]):
         bid = r["bids"].get(str(seat), 0)
         won = r["tricks_won"].get(str(seat), 0)
-        delta = rules.score(bid, won)
+        blind = bool(r.get("blind_bids", {}).get(str(seat), False))
+        delta = rules.score(bid, won, blind=blind)
         seat_score[seat]["score"] += delta
         result[str(seat)] = {
             "bid": bid,
             "won": won,
+            "blind": blind,
             "delta": delta,
             "total": seat_score[seat]["score"],
         }

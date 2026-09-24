@@ -26,7 +26,7 @@ class JoinRoomRequest(BaseModel):
 
 
 class ActionRequest(BaseModel):
-    action_type: str = Field(..., description="bid | play_card")
+    action_type: str = Field(..., description="bid | play_card | open_hand")
     payload: dict = Field(default_factory=dict, description='{"bid": n} или {"card": "AS"}')
 
 

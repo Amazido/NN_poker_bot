@@ -182,6 +182,31 @@ def test_bot_may_play_anything_without_lead_suit_or_trump():
     assert payload["card"] in ["AC", "KC", "QC"]
 
 
+# === Безлимитная колода ===
+
+@pytest.mark.parametrize("seed", [1, 2, 3, 4, 5])
+def test_bots_play_infinite_deck_with_duplicates(seed):
+    """Повторяющиеся карты не должны ломать ни выбор хода, ни списание с руки."""
+    config = {"deck": {"infinite": True}, "rounds": {"mode": "custom", "sequence": [12, 12]}}
+    state = _play_full_auto_match(config, n_players=5, seed=seed)
+    assert all(not hand for hand in state["round"]["hands"].values()) or state["match_over"]
+
+
+def test_bots_play_hand_larger_than_the_deck():
+    """Безлимитная колода снимает потолок раздачи — бот обязан доиграть и такую."""
+    config = {"deck": {"infinite": True}, "rounds": {"mode": "custom", "sequence": [20]}}
+    _play_full_auto_match(config, n_players=5)
+
+
+def test_playing_a_duplicate_removes_only_one_copy():
+    state = _state_in_play(
+        hands={1: ["KH", "KH", "5H"], 2: ["2H", "AS", "KS"], 0: ["3C", "4C", "5C"]},
+        trump_suit="S",
+    )
+    engine.apply_action(state, 1, "play_card", {"card": "KH"})
+    assert state["round"]["hands"]["1"] == ["KH", "5H"]
+
+
 def test_no_action_when_match_is_over():
     state = _play_full_auto_match({"rounds": {"mode": "custom", "sequence": [1]}}, 3)
     assert choose_auto_action(state) == (None, None, None)

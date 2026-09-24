@@ -57,4 +57,46 @@ BUILTIN_EDITIONS: List[Dict[str, Any]] = [
             "rounds": {"mode": "up_plateau_down", "start": 5, "peak": 13},
         },
     },
+    {
+        "code": "odessa_infinite",
+        "version": 1,
+        "name": "Безлимитная колода",
+        "description": (
+            "Каждая карта тянется заново, поэтому одинаковые карты встречаются "
+            "и в одной руке, и у разных игроков. При равных берёт тот, кто "
+            "положил раньше. Размер раздачи колодой не ограничен."
+        ),
+        "config": {
+            "deck": {"infinite": True},
+            "ranking": {"duplicate_first_wins": True},
+        },
+    },
+    {
+        # Эталон первого сезона. На неё будут ссылаться рейтинг и награды, поэтому
+        # конфиг фиксируется здесь целиком, а не собирается из дефолтов.
+        "code": "odessa_season_1",
+        "version": 1,
+        "name": "Сезон 1",
+        "description": (
+            "Эталонные правила первого сезона: одна колода, последовательный "
+            "заказ с крюком, двойка бьёт туза своей масти, некозырной джокер "
+            "бьёт козырного. Можно заказать вслепую и получить +5 за точный заказ."
+        ),
+        "config": {
+            "deck": {"jokers": 2, "infinite": False},
+            "ranking": {
+                "two_beats_ace_same_suit": True,
+                "offcolor_beats_oncolor": True,
+                "duplicate_first_wins": True,
+            },
+            "bidding": {"hook": True, "blind_allowed": True},
+            "scoring": {
+                "exact_per_trick": 10,
+                "exact_zero_bonus": 10,
+                "over": -5,
+                "under_per_trick": -5,
+                "blind_bonus": 5,
+            },
+        },
+    },
 ]

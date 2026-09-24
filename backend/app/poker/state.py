@@ -74,7 +74,13 @@ def rules_view(config: Optional[dict], code: str = "", name: str = "") -> Dict[s
     Игрок должен видеть, по каким правилам сел играть, — редакций теперь несколько.
     """
     rules = RulesEdition(config)
-    return {"code": code, "name": name, "summary": rules.summary()}
+    return {
+        "code": code,
+        "name": name,
+        "summary": rules.summary(),
+        # Числом, а не фразой из summary: экран заказа показывает надбавку на кнопке.
+        "blind_bonus": int(rules.config["scoring"]["blind_bonus"]) if rules.blind_allowed else 0,
+    }
 
 
 def public_view(state: GameState) -> Dict[str, Any]:
@@ -98,6 +104,8 @@ def public_view(state: GameState) -> Dict[str, Any]:
             "last_trick": r["last_trick"],
             "result": r["result"],
             "hand_counts": {seat: len(hand) for seat, hand in r["hands"].items()},
+            # Кто заказал вслепую — видно всем: это часть публичной интриги.
+            "blind_bids": r.get("blind_bids", {}),
         }
 
     kind, seat = _turn(state)
@@ -126,11 +134,22 @@ def private_view(state: GameState, seat: int) -> Dict[str, Any]:
     r = state.get("round")
     hand: List[str] = []
     available: Optional[dict] = None
+    hand_hidden = False
+    hand_count = 0
+    can_open_hand = False
 
     if r is not None:
         hand = list(r["hands"].get(str(seat), []))
+        hand_count = len(hand)
         rules = RulesEdition(state["rules"])
         n = state["n_players"]
+
+        # «Тёмная»: до открытия игрок не видит и собственных карт — иначе слепой
+        # заказ ничего не стоит.
+        if not r.get("hand_open", {}).get(str(seat), True):
+            hand_hidden = True
+            hand = []
+            can_open_hand = r["phase"] == "bidding" and str(seat) not in r["bids"]
 
         if r["phase"] == "bidding" and r["bid_turn"] == seat:
             others_sum = sum(r["bids"].values())
@@ -148,6 +167,9 @@ def private_view(state: GameState, seat: int) -> Dict[str, Any]:
         "room_id": state["room_id"],
         "seat": seat,
         "hand": hand,
+        "hand_hidden": hand_hidden,
+        "hand_count": hand_count,
+        "can_open_hand": can_open_hand,
         "your_turn": available is not None,
         "available_actions": available,
         # Публичный и приватный вид приходят отдельными WS-сообщениями — фронт

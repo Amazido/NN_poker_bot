@@ -1,6 +1,8 @@
 """Тесты колоды и старшинства во взятке."""
 import random
 
+import pytest
+
 from app.poker import cards as C
 
 
@@ -133,3 +135,73 @@ def test_offcolor_beats_oncolor_flag():
     assert C.trick_winner(
         plays, trump_suit="S", lead_suit=None, flags={"offcolor_beats_oncolor": True}
     ) == 1
+
+
+# === Безлимитная колода и одинаковые карты ===
+
+def test_infinite_deal_may_repeat_cards():
+    """Смысл безлимитной колоды — повторы, в том числе внутри одной руки."""
+    hands, trump = C.deal(4, 10, rng=random.Random(3), infinite=True)
+    dealt = [c for hand in hands for c in hand]
+    assert len(dealt) == 40
+    assert len(set(dealt)) < 40, "за 40 карт из 54 повторов не случилось — колода не безлимитная"
+    deck = set(C.build_deck())
+    assert all(c in deck for c in dealt + [trump])
+
+
+def test_infinite_deal_ignores_deck_size():
+    """Раздача крупнее колоды законна — обычная бы упала."""
+    hands, _ = C.deal(5, 30, rng=random.Random(0), infinite=True)
+    assert [len(h) for h in hands] == [30] * 5
+
+
+def test_finite_deal_still_refuses_to_overdraw():
+    with pytest.raises(ValueError):
+        C.deal(5, 30, rng=random.Random(0))
+
+
+def test_duplicate_cards_first_player_wins_by_default():
+    """Две одинаковые карты во взятке: берёт положивший раньше."""
+    plays = [(0, "KH"), (1, "KH"), (2, "5H")]
+    assert C.trick_winner(plays, trump_suit="S", lead_suit="H") == 0
+
+
+def test_duplicate_cards_last_player_wins_with_flag():
+    plays = [(0, "KH"), (1, "KH"), (2, "5H")]
+    assert C.trick_winner(
+        plays, trump_suit="S", lead_suit="H", flags={"duplicate_first_wins": False}
+    ) == 1
+
+
+def test_duplicate_trumps_resolved_by_order():
+    plays = [(0, "AH"), (1, "2S"), (2, "2S")]
+    assert C.trick_winner(plays, trump_suit="S", lead_suit="H") == 1
+    assert C.trick_winner(
+        plays, trump_suit="S", lead_suit="H", flags={"duplicate_first_wins": False}
+    ) == 2
+
+
+def test_duplicate_jokers_resolved_by_order():
+    """Два одинаковых джокера — тот же тай-брейк, что и у обычных карт."""
+    plays = [(0, "XB"), (1, "XB"), (2, "AS")]
+    assert C.trick_winner(plays, trump_suit="S", lead_suit=None) == 0
+    assert C.trick_winner(
+        plays, trump_suit="S", lead_suit=None, flags={"duplicate_first_wins": False}
+    ) == 1
+
+
+def test_duplicate_jokers_without_trump_resolved_by_order():
+    plays = [(0, "AS"), (1, "XR"), (2, "XR")]
+    assert C.trick_winner(plays, trump_suit=None, lead_suit="S", no_trump_high_joker="XR") == 1
+    assert C.trick_winner(
+        plays, trump_suit=None, lead_suit="S", no_trump_high_joker="XR",
+        flags={"duplicate_first_wins": False},
+    ) == 2
+
+
+def test_two_beats_ace_still_beats_a_duplicated_ace():
+    """Круговое старшинство и повторы уживаются: двойка бьёт обоих тузов."""
+    plays = [(0, "AH"), (1, "AH"), (2, "2H")]
+    assert C.trick_winner(
+        plays, trump_suit="S", lead_suit="H", flags={"two_beats_ace_same_suit": True}
+    ) == 2
