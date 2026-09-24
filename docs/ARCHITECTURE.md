@@ -1,7 +1,7 @@
 # Odessa Poker — архитектура
 
 Документ описывает систему в актуальной редакции. История смысловых изменений —
-в [CHANGELOG.md](./CHANGELOG.md).
+в [CHANGELOG.md](./CHANGELOG.md). Прод и выкатка — в [DEPLOY.md](./DEPLOY.md).
 
 ## Обзор
 
@@ -167,3 +167,5 @@ Live-стейт (полное состояние, включая руки) хр�
 
 Prod-стек (`docker-compose.yml`) монтирует `backend/centrifugo.prod.json` и
 публикует Centrifugo только на `127.0.0.1:8001` (наружу — через nginx).
+
+Выкатка, доступ к серверу, откат и принятые риски прода — в [DEPLOY.md](./DEPLOY.md).

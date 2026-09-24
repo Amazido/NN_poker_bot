@@ -9,6 +9,7 @@
   DEPLOY_HOST, DEPLOY_PORT (по умолч. 22), DEPLOY_USER, DEPLOY_PASSWORD
 """
 import os
+import socket
 import sys
 
 import paramiko
@@ -32,27 +33,42 @@ def _client() -> paramiko.SSHClient:
     return c
 
 
+def _stream(chan) -> None:
+    """Читать канал до EOF, а не до появления кода возврата.
+
+    Код возврата готов раньше, чем долетает хвост вывода, поэтому выход по
+    `exit_status_ready` молча терял конец (иногда весь вывод целиком).
+    """
+    grace = 0
+    while True:
+        try:
+            chunk = chan.recv(4096)
+        except socket.timeout:
+            # Команда ещё работает и просто молчит. Но если она уже завершилась,
+            # а данных нет две секунды подряд — EOF не придёт, выходим сами.
+            if chan.exit_status_ready():
+                grace += 1
+                if grace >= 2:
+                    return
+            continue
+        if not chunk:
+            return
+        grace = 0
+        sys.stdout.write(chunk.decode("utf-8", "replace"))
+        sys.stdout.flush()
+
+
 def run(cmd: str) -> int:
     c = _client()
     try:
         transport = c.get_transport()
         chan = transport.open_session()
+        # С pty stderr сливается в stdout — отдельный поток ошибок не читаем.
         chan.get_pty()
+        chan.settimeout(1.0)
         chan.exec_command(cmd)
-        while True:
-            if chan.recv_ready():
-                sys.stdout.write(chan.recv(4096).decode("utf-8", "replace"))
-                sys.stdout.flush()
-            if chan.recv_stderr_ready():
-                sys.stderr.write(chan.recv_stderr(4096).decode("utf-8", "replace"))
-                sys.stderr.flush()
-            if chan.exit_status_ready() and not chan.recv_ready() and not chan.recv_stderr_ready():
-                break
-        code = chan.recv_exit_status()
-        # добираем остаток
-        while chan.recv_ready():
-            sys.stdout.write(chan.recv(4096).decode("utf-8", "replace"))
-        return code
+        _stream(chan)
+        return chan.recv_exit_status()
     finally:
         c.close()
 
