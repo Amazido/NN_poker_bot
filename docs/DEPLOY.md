@@ -32,6 +32,15 @@
 | `deploy/nginx/odessa_ws.conf` | `/etc/nginx/snippets/odessa_ws.conf` |
 | `deploy/nginx/odessky.win.includes` | `/etc/nginx/fastpanel2-sites/odessky_win_usr/odessky.win.includes` |
 
+Маршруты в `odessky.win.includes` перечислены **поимённо**, а не одним префиксом.
+Новый корневой путь в API (например `/rules`) через домен не заработает, пока его
+туда не добавили и не перечитали nginx:
+
+```bash
+python deploy/ssh_exec.py --put deploy/nginx/odessky.win.includes /etc/nginx/fastpanel2-sites/odessky_win_usr/odessky.win.includes
+python deploy/ssh_exec.py "nginx -t && systemctl reload nginx"
+```
+
 ## Доступ к серверу
 
 Команды гоняются через `deploy/ssh_exec.py` — он не требует установленного
