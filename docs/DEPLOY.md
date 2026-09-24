@@ -139,9 +139,10 @@ python deploy/ssh_exec.py "cd /opt/odessa/repo && docker compose exec -T postgre
 ```
 
 Живые проверки снаружи — скриптами из `backend/scripts/`:
-`stand_check.py` (HTTPS + WSS + push) и `repro_cross_room.py` (изоляция личного
-канала). Оба логинятся через `POST /auth/dev`, то есть **зависят от `DEBUG=true`**
-на стенде.
+`stand_check.py` (HTTPS + WSS + push), `repro_cross_room.py` (изоляция личного
+канала) и `blind_stand_check.py` (заказ вслепую: рука закрыта, `open_hand`
+работает). Все логинятся через `POST /auth/dev`, то есть **зависят от
+`DEBUG=true`** на стенде.
 
 ## Откат
 
