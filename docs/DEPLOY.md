@@ -91,6 +91,13 @@ python deploy/ssh_exec.py "cd /opt/odessa/repo && git pull && docker compose up 
 Миграции применяются сами: команда контейнера — `alembic upgrade head`, затем
 `uvicorn`. Дефолтная редакция правил сидится при старте приложения.
 
+Бэкапов у Postgres нет (см. «Известные риски»), поэтому перед релизом с
+миграцией стоит снять дамп вручную:
+
+```bash
+python deploy/ssh_exec.py "cd /opt/odessa/repo && docker compose exec -T postgres pg_dump -U odessa -d odessa > /root/odessa_before_<миграция>.sql"
+```
+
 Проверка после выкатки:
 
 ```bash
@@ -140,9 +147,10 @@ python deploy/ssh_exec.py "cd /opt/odessa/repo && docker compose exec -T postgre
 
 Живые проверки снаружи — скриптами из `backend/scripts/`:
 `stand_check.py` (HTTPS + WSS + push), `repro_cross_room.py` (изоляция личного
-канала) и `blind_stand_check.py` (заказ вслепую: рука закрыта, `open_hand`
-работает). Все логинятся через `POST /auth/dev`, то есть **зависят от
-`DEBUG=true`** на стенде.
+канала), `blind_stand_check.py` (заказ вслепую: рука закрыта, `open_hand`
+работает) и `table_rules_stand_check.py` (форма правил: заготовки, свой стол,
+отказ по невлезающей раздаче). Все логинятся через `POST /auth/dev`, то есть
+**зависят от `DEBUG=true`** на стенде.
 
 ## Откат
 
