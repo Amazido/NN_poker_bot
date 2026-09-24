@@ -5,6 +5,8 @@ Postgres + Redis + Centrifugo, упаковка в Docker.
 
 Полное описание — в [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
 История решений — в [docs/CHANGELOG.md](./docs/CHANGELOG.md).
+Планы и принятые решения — в [docs/BACKLOG.md](./docs/BACKLOG.md).
+Деплой и эксплуатация — в [docs/DEPLOY.md](./docs/DEPLOY.md).
 
 ## Быстрый старт (локально)
 
