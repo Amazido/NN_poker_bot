@@ -68,8 +68,9 @@
   padding: 0;
   display: flex;
   gap: 6px;
-  flex-wrap: nowrap;
-  overflow: hidden;
+  /* Плашки переносятся, а не обрезаются: потерять из виду козырь хуже, чем
+     отдать шапке лишнюю строку на длинных подписях. */
+  flex-wrap: wrap;
   align-items: center;
 }
 .pill {
@@ -84,6 +85,14 @@
   padding: 4px 8px;
   border-radius: 999px;
   white-space: nowrap;
+}
+.pillGood {
+  border-color: var(--good);
+  color: var(--good);
+}
+.pillBad {
+  border-color: var(--bad);
+  color: var(--bad);
 }
 .pillTrump {
   background: var(--accent-soft);

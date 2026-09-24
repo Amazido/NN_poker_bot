@@ -1,4 +1,4 @@
-import { Pill, TrumpPill } from '../components/AppHeader';
+import { MyTrickPill, Pill, TrumpPill } from '../components/AppHeader';
 import { GameTable } from '../components/GameTable';
 import { Hand, HiddenHand } from '../components/Hand';
 import { BidPad, OpenHandRow, WaitingTurnNote } from '../components/BidPad';
@@ -44,6 +44,7 @@ export function BiddingScreen({ view, onBid, onOpenHand, onLeave, lastRoundScore
             </Pill>
           )}
           <TrumpPill round={r} />
+          <MyTrickPill round={r} seat={me.seat} />
           <Pill>{r.cards_count} карт</Pill>
         </>
       }

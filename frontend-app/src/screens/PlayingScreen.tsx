@@ -1,4 +1,4 @@
-import { Pill, TrumpPill } from '../components/AppHeader';
+import { MyTrickPill, Pill, TrumpPill } from '../components/AppHeader';
 import { GameTable } from '../components/GameTable';
 import { Hand } from '../components/Hand';
 import { PlayHint, WaitingTurnNote } from '../components/BidPad';
@@ -42,6 +42,7 @@ export function PlayingScreen({ view, onPlay, onLeave, lastRoundScore, roomCode 
             </Pill>
           )}
           <TrumpPill round={r} />
+          <MyTrickPill round={r} seat={me.seat} />
           <Pill>{r.cards_count} карт</Pill>
         </>
       }

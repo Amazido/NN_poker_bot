@@ -43,8 +43,26 @@ export function StatusBar({ children }: { children: ReactNode }) {
   return <div className={styles.statusBar}>{children}</div>;
 }
 
-export function Pill({ children, trump }: { children: ReactNode; trump?: boolean }) {
-  return <span className={[styles.pill, trump ? styles.pillTrump : ''].filter(Boolean).join(' ')}>{children}</span>;
+export function Pill({ children, trump, tone }: { children: ReactNode; trump?: boolean; tone?: 'good' | 'bad' }) {
+  const toneClass = tone === 'good' ? styles.pillGood : tone === 'bad' ? styles.pillBad : '';
+  return <span className={[styles.pill, trump ? styles.pillTrump : '', toneClass].filter(Boolean).join(' ')}>{children}</span>;
+}
+
+/**
+ * Свой заказ и свои взятки. У соперников это написано под аватаром, а своё
+ * место сидит у нижнего края стола — там строка уже не помещается.
+ */
+export function MyTrickPill({ round, seat }: { round: RoundPublic; seat: number }) {
+  const bid = round.bids[seat];
+  if (bid === undefined) return <Pill>заказ —</Pill>;
+  if (round.phase === 'bidding') return <Pill>заказ {bid}</Pill>;
+
+  const won = round.tricks_won[seat] ?? 0;
+  return (
+    <Pill tone={won === bid ? 'good' : won > bid ? 'bad' : undefined}>
+      взял <b>{won}</b> из {bid}
+    </Pill>
+  );
 }
 
 function suitColor(suit: Suit | undefined, jokerRed?: boolean): string {
