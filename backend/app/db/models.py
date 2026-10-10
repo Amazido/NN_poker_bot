@@ -20,6 +20,7 @@ from sqlalchemy import (
     Numeric,
     String,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -49,6 +50,24 @@ class RoomStatus:
 class RoomPlayerStatus:
     ACTIVE = "active"
     LEFT = "left"
+
+
+class SeasonStatus:
+    UPCOMING = "upcoming"  # заведён, но ещё не начался
+    ACTIVE = "active"      # идёт; ровно один такой (см. partial unique index)
+    CLOSED = "closed"      # закончился, результаты заморожены
+
+
+class MatchOutcome:
+    COMPLETED = "completed"  # доиграли все раздачи
+    ABANDONED = "abandoned"  # все вышли; финальным стал счёт на момент выхода
+
+
+class RatingEventKind:
+    SEED = "seed"              # вход в сезон с начальным рейтингом
+    MATCH = "match"            # результат матча
+    ADJUSTMENT = "adjustment"  # правка руками
+    RECALC = "recalc"          # пересчёт по новой формуле
 
 
 class RoundPhase:
@@ -214,6 +233,166 @@ class GameRoundModel(Base):
 
     def __repr__(self) -> str:
         return f"<GameRound room={self.room_id} #{self.round_index} ({self.phase})>"
+
+
+class SeasonModel(Base):
+    """Сезон: отрезок времени, в котором считается рейтинг.
+
+    Живёт отдельно от редакции правил, потому что у них разные жизненные циклы:
+    редакция неизменяема и вечна (на неё ссылаются сыгранные матчи), а сезон
+    начинается, идёт и закрывается. `rules_edition_id` — эталон лиги: матч
+    зачётный, если стол играл именно по этой редакции.
+    """
+    __tablename__ = "seasons"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    code: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    rules_edition_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("rules_editions.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    status: Mapped[str] = mapped_column(String(20), default=SeasonStatus.ACTIVE, nullable=False, index=True)
+    # Рейтинг, с которого игрок входит в сезон. Хранится у сезона, а не в коде:
+    # прошлые сезоны должны читаться своими числами и после смены формулы.
+    initial_rating: Mapped[int] = mapped_column(Integer, default=1000, nullable=False)
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
+    ends_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    meta: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
+
+    __table_args__ = (
+        # Двух активных сезонов быть не может: иначе непонятно, в какой зачёт
+        # идёт матч и чей рейтинг показывать. Сторожит база, а не код.
+        Index(
+            "uq_one_active_season",
+            "status",
+            unique=True,
+            postgresql_where=text("status = 'active'"),
+        ),
+    )
+
+    def __repr__(self) -> str:
+        return f"<Season {self.code} ({self.status})>"
+
+
+class MatchModel(Base):
+    """Завершённый матч — факт, живущий дольше комнаты.
+
+    Комната остаётся живым объектом (её состояние чистится, Redis-стейт живёт
+    сутки), а матч нужен для истории и рейтинга, поэтому его итог фиксируется
+    отдельной записью в момент завершения. `rated` отвечает на вопрос «пошёл ли
+    матч в зачёт», `unrated_reason` — почему нет (см. `poker/rating.py`).
+    """
+    __tablename__ = "matches"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    # RESTRICT, а не CASCADE: результат матча не должен исчезнуть вместе со столом.
+    room_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("game_rooms.id", ondelete="RESTRICT"),
+        unique=True, nullable=False, index=True,
+    )
+    # Сезон, который шёл в момент матча, — контекст, а не признак зачёта:
+    # нерейтинговые матчи тоже нужны в метриках сезона.
+    season_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("seasons.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    rules_edition_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("rules_editions.id", ondelete="RESTRICT"), nullable=True
+    )
+    rated: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
+    unrated_reason: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
+    outcome: Mapped[str] = mapped_column(String(20), default=MatchOutcome.COMPLETED, nullable=False)
+    n_players: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Сколько раздач успели сыграть и сколько было в плане: у брошенного матча
+    # это главный признак «доиграли почти всё» против «вышли на первом кону».
+    rounds_played: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    rounds_total: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    finished_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False, index=True)
+
+    players: Mapped[List["MatchPlayerModel"]] = relationship(back_populates="match")
+
+    def __repr__(self) -> str:
+        return f"<Match {self.id} ({self.outcome}, rated={self.rated})>"
+
+
+class MatchPlayerModel(Base):
+    """Результат одного игрока в матче плюс его рейтинг на момент матча.
+
+    `rating_before` пишется и у нерейтингового матча: «с каким рейтингом люди
+    садились» — метрика сама по себе, независимо от того, пошёл ли зачёт.
+    У рейтингового матча заполнены все три поля рейтинга, у остальных — только
+    `rating_before` (и то лишь если сезон вообще шёл).
+    """
+    __tablename__ = "match_players"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    match_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("matches.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    seat_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    score: Mapped[int] = mapped_column(Integer, nullable=False)
+    place: Mapped[int] = mapped_column(Integer, nullable=False)
+    is_bot: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Покинул матч по своей воле (за него доигрывал авто-ход). Результат всё
+    # равно идёт в зачёт — иначе выход стал бы способом не портить рейтинг.
+    left_match: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    rating_before: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    rating_delta: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    rating_after: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+
+    match: Mapped["MatchModel"] = relationship(back_populates="players")
+    user: Mapped["UserModel"] = relationship()
+
+    __table_args__ = (
+        UniqueConstraint("match_id", "user_id", name="uq_match_user"),
+        UniqueConstraint("match_id", "seat_index", name="uq_match_seat"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<MatchPlayer match={self.match_id} seat={self.seat_index} place={self.place}>"
+
+
+class RatingEventModel(Base):
+    """Append-only журнал изменений рейтинга: по нему рейтинг и считается.
+
+    Текущего рейтинга отдельной таблицей нет намеренно: он выводится как
+    `season.initial_rating + SUM(delta)`. Пока игроков десятки, это дешевле, чем
+    держать второе место правды, которое может разойтись с журналом. А главное —
+    формулу собираются менять: пересчёт тогда будет перезаписью журнала, и
+    «почему у меня такой рейтинг» останется на что ответить.
+    """
+    __tablename__ = "rating_events"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    season_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("seasons.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    match_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("matches.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    kind: Mapped[str] = mapped_column(String(20), default=RatingEventKind.MATCH, nullable=False)
+    delta: Mapped[int] = mapped_column(Integer, nullable=False)
+    rating_before: Mapped[int] = mapped_column(Integer, nullable=False)
+    rating_after: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Чем объясняем запись человеку: место в матче, правка руками, пересчёт.
+    note: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False, index=True)
+
+    __table_args__ = (
+        # Один матч меняет рейтинг игрока ровно один раз. Запись результата
+        # идемпотентна и по этому ограничению тоже — сторожит база.
+        UniqueConstraint("match_id", "user_id", name="uq_rating_event_match_user"),
+        Index("ix_rating_events_season_user", "season_id", "user_id"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<RatingEvent {self.kind} user={self.user_id} {self.delta:+d}>"
 
 
 class RoundActionModel(Base):

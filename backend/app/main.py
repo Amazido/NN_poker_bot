@@ -16,6 +16,7 @@ from app.poker.autoplay import choose_auto_action
 from app.poker.router import router as poker_router
 from app.poker.rules import RulesEdition
 from app.poker.rules_router import router as rules_router
+from app.poker.seasons_router import router as seasons_router
 
 
 async def ensure_builtin_rules() -> None:
@@ -45,6 +46,39 @@ async def ensure_builtin_rules() -> None:
                 is_active=True,
             )
             startup_log.info("Seeded rules edition {} v{}", spec["code"], spec["version"])
+
+
+SEASON_1_EDITION = "odessa_season_1"
+
+
+async def ensure_active_season() -> None:
+    """Открыть первый сезон, если активного ещё нет.
+
+    Сезон привязан к редакции правил: матч идёт в зачёт только за столом с
+    этими правилами. Существующий активный сезон не трогаем — закрывать и
+    открывать сезоны это ручное решение, а не следствие рестарта.
+    """
+    from app.db.base import async_session_maker
+    from app.poker.rating import INITIAL_RATING
+    from app.repositories.pg import RulesEditionRepository, SeasonRepository
+
+    async with async_session_maker() as session:
+        repo = SeasonRepository(session)
+        if await repo.get_active_season():
+            return
+        edition = await RulesEditionRepository(session).get_active_by_code(SEASON_1_EDITION)
+        if not edition:
+            startup_log.warning(
+                "No season: rules edition {} is missing", SEASON_1_EDITION
+            )
+            return
+        season = await repo.create_season(
+            code="season_1",
+            name="Сезон 1",
+            rules_edition_id=edition.id,
+            initial_rating=INITIAL_RATING,
+        )
+        startup_log.info("Opened season {} (initial rating {})", season.code, season.initial_rating)
 
 
 async def turn_timeout_task() -> None:
@@ -118,6 +152,7 @@ async def lifespan(app: FastAPI):
     reconnect_task = asyncio.create_task(redis_reconnect_task())
     await init_centrifugo()
     await ensure_builtin_rules()
+    await ensure_active_season()
     timeout_task = asyncio.create_task(turn_timeout_task())
     startup_log.success("Application started")
 
@@ -160,6 +195,7 @@ async def not_authenticated_handler(request: Request, exc: NotAuthenticated):
 app.include_router(auth_router)
 app.include_router(poker_router)
 app.include_router(rules_router)
+app.include_router(seasons_router)
 
 
 @app.get("/")

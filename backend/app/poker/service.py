@@ -13,15 +13,24 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import Conflict, InvalidMove, NotFound
-from app.db.models import GameRoomModel, RoomStatus, UserModel, UserType
+from app.db.models import (
+    GameRoomModel,
+    MatchModel,
+    MatchOutcome,
+    RoomPlayerStatus,
+    RoomStatus,
+    UserModel,
+    UserType,
+)
 from app.logger import poker_log
-from app.poker import channels, engine
+from app.poker import channels, engine, rating
 from app.poker import state as state_store
 from app.poker.rules import RulesConfigError, RulesEdition
 from app.repositories.pg import (
     RoomRepository,
     RoundRepository,
     RulesEditionRepository,
+    SeasonRepository,
     UserRepository,
 )
 
@@ -45,12 +54,16 @@ class PokerService:
         rules_repo: RulesEditionRepository,
         room_repo: RoomRepository,
         round_repo: RoundRepository,
+        season_repo: Optional[SeasonRepository] = None,
     ):
         self.session = session
         self.user_repo = user_repo
         self.rules_repo = rules_repo
         self.room_repo = room_repo
         self.round_repo = round_repo
+        # Сезон нужен только в момент завершения матча. Необязательный, чтобы
+        # код, собирающий сервис ради одного действия, не тащил его за собой.
+        self.season_repo = season_repo or SeasonRepository(session)
 
     # Дедлайн хода ушедшего игрока — не ждём полный turn_timeout_sec, чтобы не
     # подвешивать оставшихся за столом (см. leave_room).
@@ -253,6 +266,104 @@ class PokerService:
             status=RoomStatus.FINISHED,
         )
         await channels.publish_snapshot(state)
+        # Матч, из которого все вышли, всё равно состоялся: финальным считается
+        # счёт на момент выхода. Иначе выход был бы способом отменить результат.
+        await self.record_match_result(room, state, MatchOutcome.ABANDONED)
+
+    # === Итог матча: результат, метрики, рейтинг ===
+
+    async def record_match_result(
+        self, room: GameRoomModel, state: dict, outcome: str
+    ) -> Optional[MatchModel]:
+        """Зафиксировать итог матча: результат, метрики и рейтинг сезона.
+
+        Вызывается в самом конце обработки — и при нормальном завершении, и при
+        брошенном матче. Ошибка здесь не должна ломать игру: ход уже сделан и
+        разослан, поэтому исключение логируется и глотается, а сессия
+        откатывается, чтобы не отравить дальнейшие запросы. Цена известна: при
+        сбое матч останется без записи, и в метриках будет дырка.
+        """
+        try:
+            return await self._record_match_result(room, state, outcome)
+        except Exception as e:  # noqa: BLE001
+            await self.session.rollback()
+            poker_log.error("Failed to record match result for room {}: {}", room.join_code, e)
+            return None
+
+    async def _record_match_result(
+        self, room: GameRoomModel, state: dict, outcome: str
+    ) -> Optional[MatchModel]:
+        # Запись итога идемпотентна: матч может «закончиться» дважды — например,
+        # последний игрок вышел из уже доигранного матча.
+        existing = await self.season_repo.match_by_room(room.id)
+        if existing is not None:
+            return existing
+
+        season = await self.season_repo.get_active_season()
+        seats = sorted(state["seats"], key=lambda s: s["seat"])
+        if not seats:
+            return None
+
+        # «Покинул матч» берём из БД, а не из left_seats состояния: туда при
+        # старте попадают и боты, а это другое событие.
+        left_by_seat = {
+            p.seat_index: p.status == RoomPlayerStatus.LEFT
+            for p in await self.room_repo.get_players(room.id)
+        }
+
+        bot_players = sum(1 for s in seats if s.get("is_bot"))
+        elig = rating.eligibility(
+            season_edition_id=str(season.rules_edition_id) if season else None,
+            room_edition_id=str(room.rules_edition_id) if room.rules_edition_id else None,
+            human_players=len(seats) - bot_players,
+            bot_players=bot_players,
+        )
+
+        places = rating.places_by_score({s["seat"]: s["score"] for s in seats})
+        deltas = rating.deltas_by_seat(places, len(seats))
+        # Рейтинг только у людей: бот за столом делает матч нерейтинговым, так
+        # что своего рейтинга у ботов нет по построению.
+        user_ids = [uuid.UUID(s["user_id"]) for s in seats if not s.get("is_bot")]
+        ratings_before = (
+            await self.season_repo.ratings_of(season.id, user_ids, season.initial_rating)
+            if season
+            else {}
+        )
+
+        players = []
+        for s in seats:
+            uid = uuid.UUID(s["user_id"])
+            place = places[s["seat"]]
+            players.append({
+                "user_id": uid,
+                "seat_index": s["seat"],
+                "score": s["score"],
+                "place": place,
+                "is_bot": bool(s.get("is_bot")),
+                "left_match": left_by_seat.get(s["seat"], False),
+                # Рейтинг на момент матча пишем и у нерейтингового: «с каким
+                # рейтингом садились» — метрика сама по себе.
+                "rating_before": ratings_before.get(uid),
+                "rating_delta": deltas[s["seat"]],
+            })
+
+        total_rounds = len(state.get("sequence") or [])
+        match = await self.season_repo.record_match(
+            room_id=room.id,
+            season=season,
+            rules_edition_id=room.rules_edition_id,
+            rated=elig.rated,
+            unrated_reason=elig.reason,
+            outcome=outcome,
+            rounds_played=min(state.get("round_index", 0), total_rounds),
+            rounds_total=total_rounds,
+            players=players,
+        )
+        poker_log.info(
+            "Match recorded for room {}: {}, rated={} ({})",
+            room.join_code, outcome, elig.rated, elig.reason or "-",
+        )
+        return match
 
     # === Старт матча ===
 
@@ -389,6 +500,10 @@ class PokerService:
             await state_store.remove_active_room(room_id)
         await channels.publish_events(state, events)
         await channels.publish_snapshot(state)
+        # Итог снимаем последним: ход уже разослан, и сбой записи метрик не
+        # должен выглядеть для игрока как непрошедший ход.
+        if state.get("match_over"):
+            await self.record_match_result(room, state, MatchOutcome.COMPLETED)
         return state_store.public_view(state)
 
     # === Чтение состояния ===

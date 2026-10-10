@@ -9,6 +9,7 @@ from app.repositories.pg import (
     RoomRepository,
     RoundRepository,
     RulesEditionRepository,
+    SeasonRepository,
     UserRepository,
 )
 
@@ -34,6 +35,10 @@ async def get_round_repo(session: AsyncSession = Depends(get_db_session)) -> Rou
     return RoundRepository(session)
 
 
+async def get_season_repo(session: AsyncSession = Depends(get_db_session)) -> SeasonRepository:
+    return SeasonRepository(session)
+
+
 async def get_poker_service(session: AsyncSession = Depends(get_db_session)):
     from app.poker.service import PokerService
 
@@ -43,4 +48,5 @@ async def get_poker_service(session: AsyncSession = Depends(get_db_session)):
         rules_repo=RulesEditionRepository(session),
         room_repo=RoomRepository(session),
         round_repo=RoundRepository(session),
+        season_repo=SeasonRepository(session),
     )

@@ -5,6 +5,9 @@
 возвращает готовые значения тех же полей. Держать две похожие модели нельзя —
 разъедутся, и заготовка начнёт заполнять форму не тем, что потом отправится.
 """
+from datetime import datetime
+from typing import Dict, List, Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -28,3 +31,74 @@ class TableRulesSettings(BaseModel):
     undertrick_penalty: int = Field(
         ge=0, description="Штраф за каждую недобранную взятку, положительным числом"
     )
+
+
+# === Сезон, рейтинг и метрики по матчам ===
+
+class SeasonResponse(BaseModel):
+    code: str
+    name: str
+    status: str
+    initial_rating: int = Field(description="Рейтинг, с которого игрок входит в сезон")
+    starts_at: datetime
+    ends_at: Optional[datetime] = None
+    matches_rated: int = Field(description="Матчей пошло в зачёт")
+    matches_unrated: int = Field(description="Матчей не пошло в зачёт")
+    unrated_by_reason: Dict[str, int] = Field(
+        description="Почему матчи не пошли в зачёт: house_rules, bots, too_few_players, no_season"
+    )
+    matches_abandoned: int = Field(description="Матчей брошено (все вышли до конца)")
+
+
+class LeaderboardRow(BaseModel):
+    place: int
+    user_id: str
+    username: str
+    rating: int
+    matches: int = Field(description="Сколько зачётных матчей сыграно")
+    is_me: bool = False
+
+
+class MatchPlayerRow(BaseModel):
+    user_id: str
+    username: str
+    is_me: bool = False
+    seat_index: int
+    score: int = Field(description="Финальный счёт матча")
+    place: int
+    is_bot: bool
+    left_match: bool = Field(description="Покинул матч, доигрывал авто-ход")
+    rating_before: Optional[int] = Field(
+        default=None, description="Рейтинг на момент матча; null, если сезона не было"
+    )
+    rating_delta: Optional[int] = Field(default=None, description="null у нерейтингового матча")
+    rating_after: Optional[int] = None
+
+
+class MatchRow(BaseModel):
+    match_id: str
+    finished_at: datetime
+    outcome: str = Field(description="completed — доиграли, abandoned — все вышли")
+    rated: bool
+    unrated_reason: Optional[str] = None
+    n_players: int
+    rounds_played: int
+    rounds_total: int
+    players: List[MatchPlayerRow]
+
+
+class RatingEventRow(BaseModel):
+    created_at: datetime
+    kind: str = Field(description="match, seed, adjustment, recalc")
+    delta: int
+    rating_before: int
+    rating_after: int
+    note: str
+    match_id: Optional[str] = None
+
+
+class MyRatingResponse(BaseModel):
+    rating: int
+    matches: int
+    events: List[RatingEventRow] = Field(description="История изменений рейтинга, свежие сверху")
+    recent_matches: List[MatchRow]
