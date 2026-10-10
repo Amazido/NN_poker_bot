@@ -21,7 +21,10 @@ export interface CurrentTrick {
 }
 
 export interface LastTrick {
+  /** Номер взятки в коне. Вместе с `round_index` даёт её уникальный ключ. */
+  trick_number: number;
   plays: TrickPlay[];
+  lead_suit: string | null;
   winner: number;
 }
 

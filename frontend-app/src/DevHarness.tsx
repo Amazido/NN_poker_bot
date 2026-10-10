@@ -7,8 +7,10 @@ import { WaitingScreen } from './screens/WaitingScreen';
 import { BiddingScreen } from './screens/BiddingScreen';
 import { PlayingScreen } from './screens/PlayingScreen';
 
-/** Экран входа живёт до комнаты, поэтому GameView для него нет. */
-type HarnessScreen = FixtureScreen | 'entry';
+/** Экран входа живёт до комнаты, поэтому GameView для него нет.
+ *  `playing-held` — тот же «Сброс», но со взяткой, задержанной на столе: живьём
+ *  этот кадр длится две секунды и глазами его не поймать. */
+type HarnessScreen = FixtureScreen | 'entry' | 'playing-held';
 
 const SCREENS: { id: HarnessScreen; label: string }[] = [
   { id: 'entry', label: 'Вход' },
@@ -16,6 +18,7 @@ const SCREENS: { id: HarnessScreen; label: string }[] = [
   { id: 'bidding', label: 'Торги' },
   { id: 'bidding-blind', label: 'Торги втёмную' },
   { id: 'playing', label: 'Сброс' },
+  { id: 'playing-held', label: 'Добитая взятка' },
 ];
 const PLAYER_COUNTS = [2, 3, 4, 5, 6];
 const THEMES = [
@@ -42,7 +45,8 @@ export default function App() {
   const [players, setPlayers] = useState(4);
   const [theme, setTheme] = useState<ThemeId>('auto');
 
-  const view = useMemo(() => makeFixture(screen === 'entry' ? 'waiting' : screen, players), [screen, players]);
+  const fixtureScreen: FixtureScreen = screen === 'entry' ? 'waiting' : screen === 'playing-held' ? 'playing' : screen;
+  const view = useMemo(() => makeFixture(fixtureScreen, players), [fixtureScreen, players]);
   const resolved = resolveScreen(view);
 
   if (theme === 'auto') document.documentElement.removeAttribute('data-theme');
@@ -91,7 +95,11 @@ export default function App() {
             <BiddingScreen view={resolved.view} onBid={(n) => console.log('bid', n)} onOpenHand={() => console.log('open hand')} />
           )}
           {screen !== 'entry' && resolved.type === 'playing' && (
-            <PlayingScreen view={resolved.view} onPlay={(c) => console.log('play', c)} />
+            <PlayingScreen
+              view={resolved.view}
+              onPlay={(c) => console.log('play', c)}
+              heldTrick={screen === 'playing-held' ? resolved.view.round?.last_trick : null}
+            />
           )}
           {screen !== 'entry' && resolved.type === 'unsupported' && (
             <p>Экран для этой фазы ещё не спроектирован (sub-project C).</p>

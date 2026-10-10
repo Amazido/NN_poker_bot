@@ -6,6 +6,7 @@ import { createRoom, joinRoom, startMatch, bid, openHand, playCard, leaveRoomApi
 import { useGameView } from './api/useGameView';
 import { getTelegramWebApp, getStartParam } from './api/telegram';
 import { resolveScreen } from './screen-resolver';
+import { useTrickHold } from './lib/useTrickHold';
 import type { TableRulesSettings } from './types/game';
 import { EntryScreen } from './screens/EntryScreen';
 import { WaitingScreen } from './screens/WaitingScreen';
@@ -48,6 +49,9 @@ export default function App() {
   }, []);
 
   const { view, error: pollError, lastRoundScore } = useGameView(roomId, myUserId);
+  // Живёт выше экранов: последняя взятка кона добивается в тот же миг, когда
+  // начинаются торги следующего, и задержка обязана пережить смену экрана.
+  const heldTrick = useTrickHold(view);
 
   // join_code бэк отдаёт только в лобби (см. открытые вопросы в спеке) — запоминаем,
   // пока он виден, чтобы показать короткий код и после старта матча.
@@ -202,6 +206,7 @@ export default function App() {
           onLeave={leaveRoom}
           lastRoundScore={lastRoundScore}
           roomCode={roomCode ?? undefined}
+          heldTrick={heldTrick}
         />
       );
     } else if (resolved.type === 'playing') {
@@ -212,6 +217,7 @@ export default function App() {
           onLeave={leaveRoom}
           lastRoundScore={lastRoundScore}
           roomCode={roomCode ?? undefined}
+          heldTrick={heldTrick}
         />
       );
     } else if (resolved.type === 'loading') {

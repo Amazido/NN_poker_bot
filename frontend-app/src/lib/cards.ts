@@ -20,33 +20,53 @@ export function rankDisplay(rank: string): string {
   return RANK_DISPLAY[rank] ?? rank;
 }
 
-export function cardIsRed(code: CardCode): boolean {
+/** Цвет масти: ♠ чёрная, ♣ тёмно-зелёная, ♥♦ красные.
+ *
+ * Трефу от пики отличает не только силуэт: значок в углу карты — 10 пикселей,
+ * на телефоне форма там не читается вовсе. Пара «красные/чёрные» при этом
+ * сохранена — цвет масти в этой игре правило (некозырной джокер берёт масть
+ * сброса своего цвета), и зелёная трефа остаётся чёрной по смыслу.
+ */
+export function suitColor(suit: Suit): string {
+  if (suit === 'D' || suit === 'H') return 'var(--card-red)';
+  if (suit === 'C') return 'var(--card-club)';
+  return 'var(--card-ink)';
+}
+
+/** Чернила карты: масть по `suitColor`, джокер — по своему цвету. */
+export function cardColor(code: CardCode): string {
   const c = parseCard(code);
-  return c.joker ? c.color === 'red' : c.suit === 'D' || c.suit === 'H';
+  // Чёрный джокер остаётся чёрным: он не трефа, а зелёный сбил бы с толку там,
+  // где цвет джокера решает, берёт он взятку или нет.
+  if (c.joker) return c.color === 'red' ? 'var(--card-red)' : 'var(--card-ink)';
+  return suitColor(c.suit!);
 }
 
 /** Масти/джокер построены из circle/rect/polygon — без ручных bezier-путей. */
 export function suitInner(suit: Suit, color: string): string {
   if (suit === 'D') return `<rect x="32" y="32" width="36" height="36" fill="${color}" transform="rotate(45 50 50)"/>`;
+  // Трефа: три отдельных лепестка и ножка с раструбом. Лепестки мельче, чем у
+  // пики, и заходят друг на друга буквально на пару единиц: от касания впритык
+  // по стыку остаётся волосяная щель, а большее перекрытие съедает выемки, по
+  // которым трефа и узнаётся.
   if (suit === 'C')
     return `
-    <circle cx="50" cy="34" r="18" fill="${color}"/>
-    <circle cx="33" cy="58" r="18" fill="${color}"/>
-    <circle cx="67" cy="58" r="18" fill="${color}"/>
-    <polygon points="44,66 56,66 53,90 47,90" fill="${color}"/>`;
+    <circle cx="50" cy="32" r="17" fill="${color}"/>
+    <circle cx="34" cy="56" r="17" fill="${color}"/>
+    <circle cx="66" cy="56" r="17" fill="${color}"/>
+    <polygon points="45,48 55,48 61,90 39,90" fill="${color}"/>`;
   if (suit === 'H')
     return `
     <circle cx="34" cy="38" r="19" fill="${color}"/>
     <circle cx="66" cy="38" r="19" fill="${color}"/>
     <rect x="31" y="31" width="38" height="38" fill="${color}" transform="rotate(45 50 54)"/>`;
-  // 'S'
+  // Пика: острое остриё сверху и сплошные округлые плечи — противоположность
+  // трефе, которую раньше от неё отличала только развеска тех же кругов.
   return `
-    <g transform="rotate(180 50 50)">
-      <circle cx="34" cy="38" r="19" fill="${color}"/>
-      <circle cx="66" cy="38" r="19" fill="${color}"/>
-      <rect x="31" y="31" width="38" height="38" fill="${color}" transform="rotate(45 50 54)"/>
-    </g>
-    <polygon points="44,66 56,66 53,90 47,90" fill="${color}"/>`;
+    <polygon points="50,7 87,47 13,47" fill="${color}"/>
+    <circle cx="31" cy="52" r="20" fill="${color}"/>
+    <circle cx="69" cy="52" r="20" fill="${color}"/>
+    <polygon points="42,56 58,56 66,90 34,90" fill="${color}"/>`;
 }
 
 function starPoints(cx: number, cy: number, rOuter: number, rInner: number, n: number): string {

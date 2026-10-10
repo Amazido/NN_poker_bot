@@ -174,6 +174,11 @@ export function makeFixture(screenType: FixtureScreen, n: number): GameView {
     plays.push({ seat, card: hands[seat].pop()! });
   }
   for (let s = 0; s < n; s++) handCounts[s] = hands[s].length;
+  // Прошлая взятка — полный круг: её показывают и кнопкой, и задержкой на столе.
+  const lastTrickPlays = Array.from({ length: n }, (_, i) => ({
+    seat: (dealerSeat + 1 + i) % n,
+    card: deck[deck.length - 2 - i],
+  }));
   const currentTurnSeat = (trickTurnStart + playsSoFar) % n;
   const leadSuit = plays.length ? (plays[0].card[0] === 'X' ? null : plays[0].card.slice(-1)) : null;
   const myTurn = currentTurnSeat === meSeat && !plays.some((p) => p.seat === meSeat);
@@ -200,7 +205,12 @@ export function makeFixture(screenType: FixtureScreen, n: number): GameView {
       tricks_won: tricksWon,
       trick_number: 2,
       current_trick: { lead_seat: trickTurnStart, lead_suit: leadSuit, turn: currentTurnSeat, plays },
-      last_trick: { plays: [{ seat: dealerSeat, card: 'AS' }], winner: winnerOfLast },
+      last_trick: {
+        trick_number: 1,
+        plays: lastTrickPlays,
+        lead_suit: lastTrickPlays[0].card[0] === 'X' ? null : lastTrickPlays[0].card.slice(-1),
+        winner: winnerOfLast,
+      },
       result: null,
       hand_counts: handCounts,
       blind_bids: {},

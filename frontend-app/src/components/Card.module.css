@@ -51,13 +51,13 @@
   font-size: 9.5px;
 }
 .miniSuit {
-  width: 9px;
-  height: 9px;
+  width: 10px;
+  height: 10px;
   margin-top: 1px;
 }
 .sm .miniSuit {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
 }
 .miniSuit.joker {
   width: 16px;
@@ -76,12 +76,12 @@
   justify-content: center;
 }
 .pipCenter svg {
-  width: 30px;
-  height: 30px;
+  width: 33px;
+  height: 33px;
 }
 .sm .pipCenter svg {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
 }
 
 .back {

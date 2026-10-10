@@ -4,7 +4,7 @@ import { Hand, HiddenHand } from '../components/Hand';
 import { BidPad, OpenHandRow, WaitingTurnNote } from '../components/BidPad';
 import { ScoreboardModal, useScoreboard } from '../components/Scoreboard';
 import { sortHand } from '../lib/cards';
-import type { GameView, RoundScoreEvent } from '../types/game';
+import type { GameView, LastTrick, RoundScoreEvent } from '../types/game';
 import { MatchLayout } from './MatchLayout';
 import matchStyles from './MatchLayout.module.css';
 
@@ -17,9 +17,12 @@ export interface BiddingScreenProps {
   lastRoundScore?: RoundScoreEvent | null;
   /** Короткий код комнаты — после старта матча бэк его в GameView уже не отдаёт. */
   roomCode?: string;
+  /** Последняя взятка прошлого кона: бэк начинает торги сразу, и без задержки
+   * её никто не увидит (см. `lib/useTrickHold`). */
+  heldTrick?: LastTrick | null;
 }
 
-export function BiddingScreen({ view, onBid, onOpenHand, onLeave, lastRoundScore, roomCode }: BiddingScreenProps) {
+export function BiddingScreen({ view, onBid, onOpenHand, onLeave, lastRoundScore, roomCode, heldTrick }: BiddingScreenProps) {
   const r = view.round!;
   const me = view.me!;
   const blindBonus = view.rules?.blind_bonus ?? 0;
@@ -48,7 +51,7 @@ export function BiddingScreen({ view, onBid, onOpenHand, onLeave, lastRoundScore
           <Pill>{r.cards_count} карт</Pill>
         </>
       }
-      table={<GameTable view={view} mode="bidding" lastRoundScore={lastRoundScore} />}
+      table={<GameTable view={view} mode="bidding" lastRoundScore={lastRoundScore} heldTrick={heldTrick} />}
       controls={
         <>
           <div className={matchStyles.controlTop}>

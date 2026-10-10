@@ -108,17 +108,58 @@
   border-radius: 9px;
   box-shadow: 0 0 0 2px var(--good);
 }
-.lastTrick {
-  margin-top: 14px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--line);
-}
-.lastTrickLabel {
-  font-size: 10px;
+/* Кнопка живёт в углу бабла стола: место свободно при любой рассадке, а в
+   шапке она конкурировала бы со «Счётом» и «Выйти» на 360px. */
+.lastTrickBtn {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  z-index: 5;
+  border: 1px solid var(--line);
+  background: var(--surface);
   color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-bottom: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 4px 9px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.lastTrickBtn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+/* Взятка показывается поверх стола, а не поверх всего экрана: разговор идёт
+   про стол, и бабл её сам обрезает по своим границам. */
+.trickOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: rgba(10, 12, 17, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+}
+.trickOverlayCard {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  padding: 12px 10px 10px;
+  text-align: center;
+  max-width: 100%;
+}
+.trickCloseBtn {
+  margin-top: 10px;
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 12px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  cursor: pointer;
 }
 
 .oppSeat {

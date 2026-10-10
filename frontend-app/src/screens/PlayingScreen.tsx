@@ -4,7 +4,7 @@ import { Hand } from '../components/Hand';
 import { PlayHint, WaitingTurnNote } from '../components/BidPad';
 import { ScoreboardModal, useScoreboard } from '../components/Scoreboard';
 import { sortHand } from '../lib/cards';
-import type { CardCode, GameView, RoundScoreEvent } from '../types/game';
+import type { CardCode, GameView, LastTrick, RoundScoreEvent } from '../types/game';
 import { MatchLayout } from './MatchLayout';
 import matchStyles from './MatchLayout.module.css';
 
@@ -15,9 +15,11 @@ export interface PlayingScreenProps {
   lastRoundScore?: RoundScoreEvent | null;
   /** Короткий код комнаты — после старта матча бэк его в GameView уже не отдаёт. */
   roomCode?: string;
+  /** Добитая взятка, которую ещё держим на столе (см. `lib/useTrickHold`). */
+  heldTrick?: LastTrick | null;
 }
 
-export function PlayingScreen({ view, onPlay, onLeave, lastRoundScore, roomCode }: PlayingScreenProps) {
+export function PlayingScreen({ view, onPlay, onLeave, lastRoundScore, roomCode, heldTrick }: PlayingScreenProps) {
   const r = view.round!;
   const me = view.me!;
   const turnName = view.seats.find((s) => s.seat === r.current_trick?.turn)?.username ?? '';
@@ -46,7 +48,7 @@ export function PlayingScreen({ view, onPlay, onLeave, lastRoundScore, roomCode 
           <Pill>{r.cards_count} карт</Pill>
         </>
       }
-      table={<GameTable view={view} mode="playing" lastRoundScore={lastRoundScore} />}
+      table={<GameTable view={view} mode="playing" lastRoundScore={lastRoundScore} heldTrick={heldTrick} />}
       controls={
         <>
           <div className={matchStyles.controlTop}>

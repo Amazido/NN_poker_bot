@@ -29,7 +29,6 @@ def _build_one_card_round():
             "trump_card": "7S",
             "trump_suit": "S",
             "no_trump": False,
-            "no_trump_high_joker": None,
             "phase": "bidding",
             "hands": {"0": ["AH"], "1": ["2S"], "2": ["KH"]},
             "bids": {},

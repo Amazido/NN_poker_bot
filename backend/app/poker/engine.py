@@ -91,7 +91,6 @@ def start_round(state: GameState, rng: Optional[random.Random] = None) -> List[E
         "trump_card": trump_card,
         "trump_suit": trump_suit,
         "no_trump": no_trump,
-        "no_trump_high_joker": trump_card if no_trump else None,
         "phase": "bidding",
         "hands": {str(seat): hands[seat] for seat in range(n)},
         "hand_open": hand_open,
@@ -255,7 +254,6 @@ def _apply_play(
         plays_tuples,
         trump_suit=r["trump_suit"],
         lead_suit=ct["lead_suit"],
-        no_trump_high_joker=r["no_trump_high_joker"],
         flags=rules.ranking,
     )
     r["tricks_won"][str(winner)] += 1

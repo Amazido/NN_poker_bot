@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { RoundPublic } from '../types/game';
-import { jokerInner, parseCard, rankDisplay, suitInner, type Suit } from '../lib/cards';
+import { cardColor, jokerInner, parseCard, rankDisplay, suitInner } from '../lib/cards';
 import styles from './AppHeader.module.css';
 
 export function AppHeader({
@@ -65,14 +65,9 @@ export function MyTrickPill({ round, seat }: { round: RoundPublic; seat: number 
   );
 }
 
-function suitColor(suit: Suit | undefined, jokerRed?: boolean): string {
-  if (jokerRed === true || suit === 'D' || suit === 'H') return 'var(--card-red)';
-  return 'var(--card-ink)';
-}
-
 export function TrumpPill({ round }: { round: RoundPublic }) {
   const parsed = parseCard(round.trump_card);
-  const color = parsed.joker ? suitColor(undefined, parsed.color === 'red') : suitColor(parsed.suit);
+  const color = cardColor(round.trump_card);
   const glyph = parsed.joker ? jokerInner(color) : suitInner(parsed.suit!, color);
 
   return (

@@ -61,11 +61,39 @@ def test_highest_lead_wins_without_trump_in_trick():
     assert C.trick_winner(plays, trump_suit="S", lead_suit="H") == 1
 
 
-def test_no_trump_high_joker():
-    # Без козыря: старший джокер — тот, что вскрыт (XR). Он бьёт второго джокера.
-    plays = [(0, "XB"), (1, "XR"), (2, "AS")]
-    w = C.trick_winner(plays, trump_suit=None, lead_suit=None, no_trump_high_joker="XR")
-    assert w == 1
+def test_no_trump_joker_off_color_is_dummy():
+    # Без козыря, сброс ♠ (чёрный): красный джокер лёг не в масть → пустышка,
+    # взятку забирает старшая ♠.
+    plays = [(0, "KS"), (1, "XR"), (2, "AS")]
+    assert C.trick_winner(plays, trump_suit=None, lead_suit="S") == 2
+
+
+def test_no_trump_joker_takes_lead_of_own_color():
+    # Без козыря, сброс ♠: чёрный джокер в цвет → берёт взятку.
+    plays = [(0, "KS"), (1, "XB"), (2, "AS")]
+    assert C.trick_winner(plays, trump_suit=None, lead_suit="S") == 1
+
+
+def test_no_trump_two_jokers_in_color_one_wins():
+    # Оба джокера в одной взятке: берёт тот, что в цвет масти сброса,
+    # независимо от порядка хода.
+    plays = [(0, "AS"), (1, "XR"), (2, "XB")]
+    assert C.trick_winner(plays, trump_suit=None, lead_suit="S") == 2
+    plays_rev = [(0, "AS"), (1, "XB"), (2, "XR")]
+    assert C.trick_winner(plays_rev, trump_suit=None, lead_suit="S") == 1
+
+
+def test_no_trump_leading_joker_is_not_beaten_by_the_other():
+    # Пошли с джокера — он забирает всегда: козырей в раздаче нет, а второй
+    # джокер над ведущим старшинства не имеет.
+    assert C.trick_winner([(0, "XR"), (1, "XB"), (2, "AS")], trump_suit=None, lead_suit=None) == 0
+    assert C.trick_winner([(0, "XB"), (1, "XR"), (2, "AS")], trump_suit=None, lead_suit=None) == 0
+
+
+def test_no_trump_two_off_color_jokers_both_dummy():
+    """Безлимитная колода: два одинаковых джокера не в масть — оба пустышки."""
+    plays = [(0, "KS"), (1, "XR"), (2, "XR"), (3, "AS")]
+    assert C.trick_winner(plays, trump_suit=None, lead_suit="S") == 3
 
 
 def test_legal_moves_must_follow_lead():
@@ -208,12 +236,22 @@ def test_duplicate_jokers_resolved_by_order():
 
 
 def test_duplicate_jokers_without_trump_resolved_by_order():
-    plays = [(0, "AS"), (1, "XR"), (2, "XR")]
-    assert C.trick_winner(plays, trump_suit=None, lead_suit="S", no_trump_high_joker="XR") == 1
+    # Сброс ♦ (красный) — оба XR в цвет, спор решает тай-брейк одинаковых карт.
+    plays = [(0, "AD"), (1, "XR"), (2, "XR")]
+    assert C.trick_winner(plays, trump_suit=None, lead_suit="D") == 1
     assert C.trick_winner(
-        plays, trump_suit=None, lead_suit="S", no_trump_high_joker="XR",
-        flags={"duplicate_first_wins": False},
+        plays, trump_suit=None, lead_suit="D", flags={"duplicate_first_wins": False},
     ) == 2
+
+
+def test_duplicate_leading_jokers_without_trump_resolved_by_order():
+    # Тот же тай-брейк, когда взятку ведёт джокер: перебить его может только
+    # такой же джокер, и только при «берёт положивший позже».
+    plays = [(0, "XB"), (1, "XB"), (2, "AS")]
+    assert C.trick_winner(plays, trump_suit=None, lead_suit=None) == 0
+    assert C.trick_winner(
+        plays, trump_suit=None, lead_suit=None, flags={"duplicate_first_wins": False},
+    ) == 1
 
 
 def test_two_beats_ace_still_beats_a_duplicated_ace():

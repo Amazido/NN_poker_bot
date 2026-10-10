@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { STAGE_W, TABLE_BUBBLE_H, seatTablePositions } from '../lib/layout';
-import type { GameView, RoundScoreEvent, Seat } from '../types/game';
+import type { GameView, LastTrick, RoundScoreEvent, Seat, TrickPlay } from '../types/game';
 import { Card } from './Card';
 import styles from './Table.module.css';
 
@@ -114,32 +115,68 @@ function SelfSeat({
   );
 }
 
-function LastTrick({ view }: { view: GameView }) {
-  const last = view.round!.last_trick;
-  if (!last) return null;
+/** Ряд карт взятки с именами; `winner` отмечает забравшего, если он уже известен. */
+function TrickRow({ seats, plays, winner }: { seats: Seat[]; plays: TrickPlay[]; winner?: number }) {
   return (
-    <div className={styles.lastTrick}>
-      <div className={styles.lastTrickLabel}>Прошлая взятка</div>
-      <div className={styles.trickCards}>
-        {last.plays.map((p) => {
-          const name = view.seats.find((s) => s.seat === p.seat)?.username ?? '';
-          const isWinner = p.seat === last.winner;
-          return (
-            <div key={p.seat} className={styles.trickSlot}>
-              <div className={isWinner ? styles.winnerCard : undefined}>
-                <Card code={p.card} size="sm" />
-              </div>
-              <div className={`${styles.who} ${isWinner ? styles.whoWinner : ''}`}>{isWinner ? `✓ ${name}` : name}</div>
+    <div className={styles.trickCards}>
+      {plays.map((p) => {
+        const name = seats.find((s) => s.seat === p.seat)?.username ?? '';
+        const isWinner = p.seat === winner;
+        return (
+          <div key={p.seat} className={styles.trickSlot}>
+            <div className={isWinner ? styles.winnerCard : undefined}>
+              <Card code={p.card} size="sm" />
             </div>
-          );
-        })}
+            <div className={`${styles.who} ${isWinner ? styles.whoWinner : ''}`}>{isWinner ? `✓ ${name}` : name}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function LastTrickOverlay({ view, trick, onClose }: { view: GameView; trick: LastTrick; onClose: () => void }) {
+  const name = view.seats.find((s) => s.seat === trick.winner)?.username ?? '';
+  return (
+    <div className={styles.trickOverlay} onClick={onClose}>
+      <div className={styles.trickOverlayCard} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.centerHint}>
+          Взятка №{trick.trick_number} · забрал <b>{name}</b>
+        </div>
+        <TrickRow seats={view.seats} plays={trick.plays} winner={trick.winner} />
+        <button className={styles.trickCloseBtn} onClick={onClose}>
+          Закрыть
+        </button>
       </div>
     </div>
   );
 }
 
-function CenterZone({ view, mode }: { view: GameView; mode: 'bidding' | 'playing' }) {
+function CenterZone({
+  view,
+  mode,
+  heldTrick,
+}: {
+  view: GameView;
+  mode: 'bidding' | 'playing';
+  heldTrick?: LastTrick | null;
+}) {
   const r = view.round!;
+
+  // Задержанная взятка главнее всего остального: иначе её перекроет либо
+  // следующая взятка, либо торги нового кона — бэк открывает их сразу.
+  if (heldTrick) {
+    const name = view.seats.find((s) => s.seat === heldTrick.winner)?.username ?? '';
+    return (
+      <div className={styles.centerZone}>
+        <div className={styles.centerHint}>
+          Взятка №{heldTrick.trick_number} · забрал <b>{name}</b>
+        </div>
+        <TrickRow seats={view.seats} plays={heldTrick.plays} winner={heldTrick.winner} />
+      </div>
+    );
+  }
+
   if (mode === 'bidding') {
     return (
       <div className={styles.centerZone}>
@@ -147,28 +184,13 @@ function CenterZone({ view, mode }: { view: GameView; mode: 'bidding' | 'playing
       </div>
     );
   }
-  if (!r.current_trick || r.current_trick.plays.length === 0) {
-    return (
-      <div className={styles.centerZone}>
-        <div className={styles.centerHint}>Взятка №{r.trick_number}</div>
-        <LastTrick view={view} />
-      </div>
-    );
-  }
+
   return (
     <div className={styles.centerZone}>
       <div className={styles.centerHint}>Взятка №{r.trick_number}</div>
-      <div className={styles.trickCards}>
-        {r.current_trick.plays.map((p) => {
-          const name = view.seats.find((s) => s.seat === p.seat)?.username ?? '';
-          return (
-            <div key={p.seat} className={styles.trickSlot}>
-              <Card code={p.card} size="sm" />
-              <div className={styles.who}>{name}</div>
-            </div>
-          );
-        })}
-      </div>
+      {r.current_trick && r.current_trick.plays.length > 0 && (
+        <TrickRow seats={view.seats} plays={r.current_trick.plays} />
+      )}
     </div>
   );
 }
@@ -177,18 +199,28 @@ export function GameTable({
   view,
   mode,
   lastRoundScore,
+  heldTrick,
 }: {
   view: GameView;
   mode: 'bidding' | 'playing';
   lastRoundScore?: RoundScoreEvent | null;
+  /** Добитая взятка, которую ещё держим на столе (см. `useTrickHold`). */
+  heldTrick?: LastTrick | null;
 }) {
   const meSeat = view.me!.seat;
   const points = seatTablePositions(Math.max(view.n_players, view.seats.length), STAGE_W, TABLE_BUBBLE_H, meSeat);
   const opponents = view.seats.filter((s) => s.seat !== meSeat);
+  const lastTrick = view.round?.last_trick ?? null;
+  const [lastOpen, setLastOpen] = useState(false);
 
   return (
     <div className={styles.tableWrap}>
       <div className={styles.tableOval} />
+      {lastTrick && (
+        <button className={styles.lastTrickBtn} onClick={() => setLastOpen(true)}>
+          Прошлая взятка
+        </button>
+      )}
       {opponents.map((seat) => (
         <OpponentSeat
           key={seat.seat}
@@ -200,7 +232,8 @@ export function GameTable({
         />
       ))}
       <SelfSeat view={view} point={points[meSeat]} mode={mode} scoreDelta={lastRoundScore?.result[meSeat]?.delta ?? null} />
-      <CenterZone view={view} mode={mode} />
+      <CenterZone view={view} mode={mode} heldTrick={heldTrick} />
+      {lastOpen && lastTrick && <LastTrickOverlay view={view} trick={lastTrick} onClose={() => setLastOpen(false)} />}
     </div>
   );
 }

@@ -17,8 +17,10 @@
   4. Карты масти сброса (по рангу).
   5. Пустышки (прочие масти) — во взятке не участвуют.
 
-БЕЗ КОЗЫРЯ (колоду ведёт джокер): оба джокера бьют любые обычные карты,
-старшим считается тот джокер, что был вскрыт ведущим колоду.
+БЕЗ КОЗЫРЯ (колоду ведёт джокер) джокер работает так же, как некозырной при
+козыре: берёт масть сброса ТОЛЬКО своего цвета, против чужого цвета — пустышка.
+Джокер, ведущий взятку, забирает её: бить его нечем, козырей в такой раздаче
+нет, и второй джокер его не перебивает.
 
 Флаги редакции правил:
   offcolor_beats_oncolor  — некозырной джокер берёт козырного, когда оба в одной
@@ -153,7 +155,6 @@ def trick_winner(
     *,
     trump_suit: Optional[str],
     lead_suit: Optional[str],
-    no_trump_high_joker: Optional[str] = None,
     flags: Optional[Dict[str, bool]] = None,
 ) -> int:
     """Определить место (seat) победителя взятки.
@@ -189,16 +190,22 @@ def trick_winner(
     # === БЕЗ КОЗЫРЯ (колоду ведёт джокер) ===
     if trump_suit is None:
         jokers = [(s, c) for s, c in plays if is_joker(c)]
-        if jokers:
-            high = [s for s, c in jokers if c == no_trump_high_joker]
-            if high:
-                return pick(high)
-            return pick([s for s, _ in jokers])
-        if lead_suit is not None:
-            w = best_of_suit(lead_suit)
-            if w is not None:
-                return w
-        return plays[0][0]
+        if lead_suit is None:
+            # Взятку ведёт джокер — он её и берёт: козырей в этой раздаче нет,
+            # а джокер другого цвета старшинства над ведущим не имеет. Спорить с
+            # ним может только такой же джокер (безлимитная колода) — по общему
+            # тай-брейку одинаковых карт.
+            if jokers:
+                lead_joker = jokers[0][1]
+                return pick([s for s, c in jokers if c == lead_joker])
+            return plays[0][0]
+        lead_color = color_of_suit(lead_suit)
+        in_color = [s for s, c in jokers if joker_color(c) == lead_color]
+        if in_color:
+            return pick(in_color)
+        # Джокеры чужого цвета — пустышки, взятку делит масть сброса.
+        w = best_of_suit(lead_suit)
+        return w if w is not None else plays[0][0]
 
     # === ЕСТЬ КОЗЫРЬ ===
     trump_color = color_of_suit(trump_suit)

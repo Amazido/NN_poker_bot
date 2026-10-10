@@ -1,4 +1,4 @@
-import { parseCard, rankDisplay, cardIsRed, suitInner, jokerInner } from '../lib/cards';
+import { parseCard, rankDisplay, cardColor, suitInner, jokerInner } from '../lib/cards';
 import type { CardCode } from '../types/game';
 import styles from './Card.module.css';
 
@@ -19,8 +19,7 @@ export interface CardProps {
 
 export function Card({ code, size = 'md', playable, disabled, onClick }: CardProps) {
   const c = parseCard(code);
-  const red = cardIsRed(code);
-  const ink = red ? 'var(--card-red)' : 'var(--card-ink)';
+  const ink = cardColor(code);
   const rankTxt = c.joker ? '' : rankDisplay(c.rank!);
   const cls = [styles.card, size === 'sm' ? styles.sm : '', playable ? styles.playable : '', disabled ? styles.disabled : '']
     .filter(Boolean)
