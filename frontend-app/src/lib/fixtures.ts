@@ -1,5 +1,6 @@
-﻿import { buildDeck, legalMoves } from './cards';
+import { buildDeck, legalMoves } from './cards';
 import { FALLBACK_LIMITS, FALLBACK_SETTINGS } from './rulesForm';
+import type { SeasonData } from '../screens/SeasonScreen';
 import type { CardCode, GameView, RulesPresetsResponse, Seat } from '../types/game';
 
 /** Заготовки правил для дев-стенда: в ?mock=1 ходить в API некуда. */
@@ -25,6 +26,30 @@ export const FIXTURE_PRESETS: RulesPresetsResponse = {
 };
 
 const ODESSA_NAMES = ['Аркадий', 'Софа', 'Моня', 'Циля', 'Жора', 'Бэла'];
+
+/** Таблица сезона для дев-стенда: с ничьёй на втором месте (равный рейтинг —
+ * равное место) и собой в середине, а не на вершине. */
+export const FIXTURE_SEASON: SeasonData = {
+  season: {
+    code: 'season_1',
+    name: 'Сезон 1',
+    status: 'active',
+    initial_rating: 1000,
+    starts_at: '2026-10-12T11:47:33Z',
+    ends_at: null,
+  },
+  rows: [
+    { place: 1, user_id: 'u0', username: 'Аркадий', rating: 1014, matches: 31, is_me: false },
+    { place: 2, user_id: 'u1', username: 'Софа', rating: 1009, matches: 18, is_me: false },
+    { place: 2, user_id: 'u2', username: 'Моня', rating: 1009, matches: 27, is_me: false },
+    { place: 4, user_id: 'u3', username: 'Циля', rating: 1002, matches: 12, is_me: true },
+    { place: 5, user_id: 'u4', username: 'Жора', rating: 998, matches: 24, is_me: false },
+    { place: 6, user_id: 'u5', username: 'Бэла', rating: 991, matches: 9, is_me: false },
+  ],
+};
+
+/** Тот же экран на старте сезона: сезон открыт, зачётных матчей ещё нет. */
+export const FIXTURE_SEASON_EMPTY: SeasonData = { season: FIXTURE_SEASON.season, rows: [] };
 
 const FIXTURE_RULES = {
   code: 'odessa_season_1',

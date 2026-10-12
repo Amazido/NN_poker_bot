@@ -9,6 +9,7 @@ import { resolveScreen } from './screen-resolver';
 import { useTrickHold } from './lib/useTrickHold';
 import type { TableRulesSettings } from './types/game';
 import { EntryScreen } from './screens/EntryScreen';
+import { SeasonScreen } from './screens/SeasonScreen';
 import { WaitingScreen } from './screens/WaitingScreen';
 import { BiddingScreen } from './screens/BiddingScreen';
 import { PlayingScreen } from './screens/PlayingScreen';
@@ -32,6 +33,7 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [entryError, setEntryError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [seasonOpen, setSeasonOpen] = useState(false);
 
   useEffect(() => {
     const tg = getTelegramWebApp();
@@ -177,8 +179,20 @@ export default function App() {
     );
   } else if (!myUserId) {
     body = <StatusScreen message="Входим…" />;
+  } else if (!roomId && seasonOpen) {
+    // Таблица сезона живёт на месте экрана входа: это не часть матча, и
+    // возвращаться из неё некуда, кроме главного меню.
+    body = <SeasonScreen onBack={() => setSeasonOpen(false)} />;
   } else if (!roomId) {
-    body = <EntryScreen onCreate={handleCreate} onJoin={handleJoin} busy={busy} error={entryError} />;
+    body = (
+      <EntryScreen
+        onCreate={handleCreate}
+        onJoin={handleJoin}
+        onShowSeason={() => setSeasonOpen(true)}
+        busy={busy}
+        error={entryError}
+      />
+    );
   } else if (pollError) {
     body = <StatusScreen message={pollError} action={{ label: 'Выйти из комнаты', onClick: leaveRoom }} />;
   } else if (!view) {

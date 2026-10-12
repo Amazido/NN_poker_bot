@@ -1,19 +1,22 @@
 import { useMemo, useState } from 'react';
 import styles from './App.module.css';
-import { FIXTURE_PRESETS, makeFixture, type FixtureScreen } from './lib/fixtures';
+import { FIXTURE_PRESETS, FIXTURE_SEASON, FIXTURE_SEASON_EMPTY, makeFixture, type FixtureScreen } from './lib/fixtures';
 import { resolveScreen } from './screen-resolver';
 import { EntryScreen } from './screens/EntryScreen';
+import { SeasonScreen } from './screens/SeasonScreen';
 import { WaitingScreen } from './screens/WaitingScreen';
 import { BiddingScreen } from './screens/BiddingScreen';
 import { PlayingScreen } from './screens/PlayingScreen';
 
-/** Экран входа живёт до комнаты, поэтому GameView для него нет.
+/** Экран входа и таблица сезона живут до комнаты, поэтому GameView для них нет.
  *  `playing-held` — тот же «Сброс», но со взяткой, задержанной на столе: живьём
  *  этот кадр длится две секунды и глазами его не поймать. */
-type HarnessScreen = FixtureScreen | 'entry' | 'playing-held';
+type HarnessScreen = FixtureScreen | 'entry' | 'playing-held' | 'season' | 'season-empty';
 
 const SCREENS: { id: HarnessScreen; label: string }[] = [
   { id: 'entry', label: 'Вход' },
+  { id: 'season', label: 'Сезон' },
+  { id: 'season-empty', label: 'Сезон без матчей' },
   { id: 'waiting', label: 'Ожидание' },
   { id: 'bidding', label: 'Торги' },
   { id: 'bidding-blind', label: 'Торги втёмную' },
@@ -45,7 +48,9 @@ export default function App() {
   const [players, setPlayers] = useState(4);
   const [theme, setTheme] = useState<ThemeId>('auto');
 
-  const fixtureScreen: FixtureScreen = screen === 'entry' ? 'waiting' : screen === 'playing-held' ? 'playing' : screen;
+  // Экраны до комнаты стола не рисуют — фикстура им нужна только как заглушка.
+  const preRoom = screen === 'entry' || screen === 'season' || screen === 'season-empty';
+  const fixtureScreen: FixtureScreen = preRoom ? 'waiting' : screen === 'playing-held' ? 'playing' : screen;
   const view = useMemo(() => makeFixture(fixtureScreen, players), [fixtureScreen, players]);
   const resolved = resolveScreen(view);
 
@@ -80,9 +85,16 @@ export default function App() {
               presets={FIXTURE_PRESETS}
               onCreate={(opts) => console.log('create', opts)}
               onJoin={(c) => console.log('join', c)}
+              onShowSeason={() => setScreen('season')}
             />
           )}
-          {screen !== 'entry' && resolved.type === 'waiting' && (
+          {(screen === 'season' || screen === 'season-empty') && (
+            <SeasonScreen
+              data={screen === 'season' ? FIXTURE_SEASON : FIXTURE_SEASON_EMPTY}
+              onBack={() => setScreen('entry')}
+            />
+          )}
+          {!preRoom && resolved.type === 'waiting' && (
             <WaitingScreen
               view={resolved.view}
               myUserId={resolved.view.seats[0]?.user_id ?? ''}
@@ -91,17 +103,17 @@ export default function App() {
               onAddBot={() => console.log('add bot')}
             />
           )}
-          {screen !== 'entry' && resolved.type === 'bidding' && (
+          {!preRoom && resolved.type === 'bidding' && (
             <BiddingScreen view={resolved.view} onBid={(n) => console.log('bid', n)} onOpenHand={() => console.log('open hand')} />
           )}
-          {screen !== 'entry' && resolved.type === 'playing' && (
+          {!preRoom && resolved.type === 'playing' && (
             <PlayingScreen
               view={resolved.view}
               onPlay={(c) => console.log('play', c)}
               heldTrick={screen === 'playing-held' ? resolved.view.round?.last_trick : null}
             />
           )}
-          {screen !== 'entry' && resolved.type === 'unsupported' && (
+          {!preRoom && resolved.type === 'unsupported' && (
             <p>Экран для этой фазы ещё не спроектирован (sub-project C).</p>
           )}
         </div>

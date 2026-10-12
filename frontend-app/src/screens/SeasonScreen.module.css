@@ -1,0 +1,121 @@
+.body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  padding: 18px;
+  gap: 14px;
+  /* Таблица сезона растёт с числом игроков — скроллим её, а не страницу:
+     игровая колонка фиксирована по высоте. */
+  overflow-y: auto;
+}
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.title {
+  font-family: 'Unbounded', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 18px;
+}
+.subtitle {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+.backBtn {
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 12px;
+  padding: 7px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.backBtn:hover {
+  color: var(--ink);
+  border-color: var(--accent);
+}
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 10px;
+  box-shadow: var(--shadow-sm);
+}
+.headRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px 8px;
+  border-bottom: 1px solid var(--line);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+.row,
+.rowMe {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 8px;
+  border-radius: 10px;
+}
+.rowMe {
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.place {
+  width: 20px;
+  flex: 0 0 auto;
+  text-align: center;
+  font-family: 'Unbounded', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--muted);
+}
+.name {
+  flex: 1 1 auto;
+  font-weight: 700;
+  font-size: 13.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.matches {
+  flex: 0 0 auto;
+  width: 48px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.rating {
+  flex: 0 0 auto;
+  /* Ширину задаёт заголовок «РЕЙТИНГ», а не число: оно короче, и если мерить
+     по нему, заголовок вылезает за край карточки. */
+  width: 84px;
+  text-align: right;
+  font-family: 'Unbounded', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+}
+.note {
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.45;
+  text-align: center;
+  padding: 10px 6px;
+}
+.error {
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--bad);
+  font-weight: 600;
+}

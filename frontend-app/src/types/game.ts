@@ -172,3 +172,25 @@ export interface PrivateView {
 export interface GameView extends PublicView {
   me: PrivateView | null;
 }
+
+/** GET /seasons/current — идущий сезон. */
+export interface SeasonSummary {
+  code: string;
+  name: string;
+  status: string;
+  initial_rating: number;
+  starts_at: string;
+  ends_at: string | null;
+}
+
+/** Строка лидерборда сезона. Равный рейтинг — равное место. */
+export interface LeaderboardRow {
+  place: number;
+  user_id: string;
+  username: string;
+  rating: number;
+  /** Сколько зачётных матчей сыграно: рейтинг +3 за один матч и за тридцать —
+   * разные вещи, и по таблице это должно быть видно. */
+  matches: number;
+  is_me: boolean;
+}

@@ -15,13 +15,14 @@ import styles from './EntryScreen.module.css';
 export interface EntryScreenProps {
   onCreate: (opts: { rulesCode?: string; rules?: TableRulesSettings }) => void;
   onJoin: (code: string) => void;
+  onShowSeason?: () => void;
   busy?: boolean;
   error?: string | null;
   /** Дев-стенд подставляет заготовки сам — ходить в API оттуда некуда. */
   presets?: RulesPresetsResponse;
 }
 
-export function EntryScreen({ onCreate, onJoin, busy, error, presets: given }: EntryScreenProps) {
+export function EntryScreen({ onCreate, onJoin, onShowSeason, busy, error, presets: given }: EntryScreenProps) {
   const [tab, setTab] = useState<'create' | 'join'>('create');
   const [code, setCode] = useState('');
   const [presets, setPresets] = useState<RulesPresetsResponse | null>(given ?? null);
@@ -67,6 +68,14 @@ export function EntryScreen({ onCreate, onJoin, busy, error, presets: given }: E
           <div className={styles.title}>Одесский покер</div>
           <div className={styles.subtitle}>Собери стол или войди по коду друга</div>
         </div>
+
+        {onShowSeason && (
+          <div className={styles.topActions}>
+            <button type="button" className={styles.seasonBtn} onClick={onShowSeason}>
+              Результаты сезона
+            </button>
+          </div>
+        )}
 
         <div className={styles.tabs}>
           <button type="button" className={tab === 'create' ? styles.tabActive : styles.tab} onClick={() => setTab('create')}>
