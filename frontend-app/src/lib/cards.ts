@@ -20,24 +20,14 @@ export function rankDisplay(rank: string): string {
   return RANK_DISPLAY[rank] ?? rank;
 }
 
-/** Цвет масти: ♠ чёрная, ♣ тёмно-зелёная, ♥♦ красные.
- *
- * Трефу от пики отличает не только силуэт: значок в углу карты — 10 пикселей,
- * на телефоне форма там не читается вовсе. Пара «красные/чёрные» при этом
- * сохранена — цвет масти в этой игре правило (некозырной джокер берёт масть
- * сброса своего цвета), и зелёная трефа остаётся чёрной по смыслу.
- */
+/** Цвет масти: ♠♣ чёрные, ♥♦ красные. Трефу от пики отличает силуэт. */
 export function suitColor(suit: Suit): string {
-  if (suit === 'D' || suit === 'H') return 'var(--card-red)';
-  if (suit === 'C') return 'var(--card-club)';
-  return 'var(--card-ink)';
+  return suit === 'D' || suit === 'H' ? 'var(--card-red)' : 'var(--card-ink)';
 }
 
 /** Чернила карты: масть по `suitColor`, джокер — по своему цвету. */
 export function cardColor(code: CardCode): string {
   const c = parseCard(code);
-  // Чёрный джокер остаётся чёрным: он не трефа, а зелёный сбил бы с толку там,
-  // где цвет джокера решает, берёт он взятку или нет.
   if (c.joker) return c.color === 'red' ? 'var(--card-red)' : 'var(--card-ink)';
   return suitColor(c.suit!);
 }

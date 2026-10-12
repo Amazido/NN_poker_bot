@@ -55,9 +55,6 @@
   --card-bg: #fffdf8;
   --card-ink: #23242b;
   --card-red: #a23434;
-  /* Трефа отличается от пики цветом, а не только силуэтом: значок в углу карты
-     — 10 пикселей, там форма не читается вовсе. */
-  --card-club: #1a6e4a;
   --card-back-a: #3d4a63;
   --card-back-b: #2e3a50;
   --card-back-mark: rgba(255, 255, 255, 0.14);
@@ -84,7 +81,6 @@
     --card-bg: #f6f1e6;
     --card-ink: #23242b;
     --card-red: #a9393a;
-    --card-club: #1d7a53;
     --card-back-a: #38415a;
     --card-back-b: #262e3f;
     --card-back-mark: rgba(255, 255, 255, 0.08);
@@ -111,7 +107,6 @@
   --card-bg: #fffdf8;
   --card-ink: #23242b;
   --card-red: #a23434;
-  --card-club: #1a6e4a;
   --card-back-a: #3d4a63;
   --card-back-b: #2e3a50;
   --card-back-mark: rgba(255, 255, 255, 0.14);
@@ -137,7 +132,6 @@
   --card-bg: #f6f1e6;
   --card-ink: #23242b;
   --card-red: #a9393a;
-  --card-club: #1d7a53;
   --card-back-a: #38415a;
   --card-back-b: #262e3f;
   --card-back-mark: rgba(255, 255, 255, 0.08);
