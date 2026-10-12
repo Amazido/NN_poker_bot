@@ -33,28 +33,6 @@
   font-weight: 700;
   font-size: 14px;
 }
-/* Выход в таблицу сезона: над табами, прижат вправо — это не третий способ
-   сесть за стол, поэтому в один ряд с «Создать/Присоединиться» не встаёт. */
-.topActions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: -8px;
-}
-.seasonBtn {
-  border: 1px solid var(--line);
-  background: var(--surface-2);
-  color: var(--ink);
-  font: inherit;
-  font-weight: 600;
-  font-size: 12px;
-  padding: 7px 12px;
-  border-radius: 999px;
-  cursor: pointer;
-}
-.seasonBtn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
 .tabs {
   display: flex;
   background: var(--surface);

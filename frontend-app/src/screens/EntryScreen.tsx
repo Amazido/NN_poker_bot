@@ -62,20 +62,12 @@ export function EntryScreen({ onCreate, onJoin, onShowSeason, busy, error, prese
 
   return (
     <>
-      <AppHeader roomCode="—" />
+      <AppHeader roomCode="—" onShowSeason={onShowSeason} />
       <div className={styles.body}>
         <div>
           <div className={styles.title}>Одесский покер</div>
           <div className={styles.subtitle}>Собери стол или войди по коду друга</div>
         </div>
-
-        {onShowSeason && (
-          <div className={styles.topActions}>
-            <button type="button" className={styles.seasonBtn} onClick={onShowSeason}>
-              Результаты сезона
-            </button>
-          </div>
-        )}
 
         <div className={styles.tabs}>
           <button type="button" className={tab === 'create' ? styles.tabActive : styles.tab} onClick={() => setTab('create')}>

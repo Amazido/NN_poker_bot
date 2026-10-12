@@ -47,6 +47,25 @@
   color: var(--bad);
   border-color: var(--bad);
 }
+/* Выход в таблицу сезона. Стоит в шапке, а не среди «Создать/Присоединиться»:
+   это не третий способ сесть за стол. */
+.seasonBtn {
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.seasonBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
 .scoresBtn {
   flex: 0 0 auto;
   border: 1px solid var(--line);

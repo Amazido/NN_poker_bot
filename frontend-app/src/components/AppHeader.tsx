@@ -7,11 +7,13 @@ export function AppHeader({
   roomCode,
   onLeave,
   onShowScores,
+  onShowSeason,
   status,
 }: {
   roomCode: string;
   onLeave?: () => void;
   onShowScores?: () => void;
+  onShowSeason?: () => void;
   status?: ReactNode;
 }) {
   return (
@@ -22,6 +24,11 @@ export function AppHeader({
           <small>стол №{roomCode}</small>
         </div>
         <div className={styles.headerActions}>
+          {onShowSeason && (
+            <button className={styles.seasonBtn} onClick={onShowSeason}>
+              Результаты сезона
+            </button>
+          )}
           {onShowScores && (
             <button className={styles.scoresBtn} onClick={onShowScores}>
               Счёт
